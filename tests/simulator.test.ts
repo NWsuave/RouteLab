@@ -27,7 +27,7 @@ function testRoutedPing(): void {
 
 function testBrokenGateway(): void {
   const result = simulatePing(brokenConfigSample.topology, brokenConfigSample.ping);
-  assert(messages(result).includes("h1 ARPs for 10.0.1.254"));
+  assert(messages(result).includes("Host A ARPs for 10.0.1.254"));
   assert(!messages(result).includes("Host A received ICMP echo reply"));
 }
 
@@ -59,8 +59,8 @@ function testUnlinkedDropsAreSummarized(): void {
     links: [],
   };
   const result = simulatePing(topology, { fromHostId: "h1", toIp: "10.0.0.20" });
-  assert(messages(result).includes("Dropped 1 frame on unlinked interface: h1.eth0"));
-  assert(!messages(result).includes("h1.eth0 is not linked"));
+  assert(messages(result).includes("Dropped 1 frame on unlinked interface: Host A.eth0"));
+  assert(!messages(result).includes("Host A.eth0 is not linked"));
 }
 
 testSameSubnetPing();

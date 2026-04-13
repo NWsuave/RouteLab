@@ -58,7 +58,7 @@ function render(): void {
           ${renderLinkLabels(topology.links)}
           ${topology.devices.map(renderDevice).join("")}
         </svg>
-        <p class="hint">${linkStart ? `Choose another device port to link from ${linkStart.deviceId}.${linkStart.portId}.` : `${selectedSample.description} Drag devices to reposition them.`}</p>
+        <p class="hint">${linkStart ? `Choose another device port to link from ${formatPortRef(linkStart)}.` : `${selectedSample.description} Drag devices to reposition them.`}</p>
       </section>
 
       <aside class="config-pane">
@@ -79,7 +79,7 @@ function render(): void {
                     <span>${item.reason}</span>
                     <span class="protocol-badge">${frameBadge(item.frame)}</span>
                   </div>
-                  <div class="step-meta">${item.from.deviceId}.${item.from.portId} <span>to</span> ${item.to.deviceId}.${item.to.portId}</div>
+                  <div class="step-meta">${formatPortRef(item.from)} <span>to</span> ${formatPortRef(item.to)}</div>
                   <div class="step-detail">${frameDetail(item.frame)}</div>
                 </div>
               </li>
@@ -772,6 +772,10 @@ function nextId(prefix: string): string {
 
 function deviceName(deviceId: string): string {
   return topology.devices.find((device) => device.id === deviceId)?.name ?? deviceId;
+}
+
+function formatPortRef(port: { deviceId: string; portId: string }): string {
+  return `${deviceName(port.deviceId)}.${port.portId}`;
 }
 
 function cloneTopology(source: Topology): Topology {

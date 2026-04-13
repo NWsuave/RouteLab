@@ -173,11 +173,11 @@ function sendIpFromDevice(
 
   const ownerIp = findPortIp(state, deviceId, outPortId);
   if (!ownerIp) {
-    addLog(state, "drop", `${deviceId}.${outPortId} has no IPv4 address for ARP`, deviceId);
+    addLog(state, "drop", `${formatPortRef(state, { deviceId, portId: outPortId })} has no IPv4 address for ARP`, deviceId);
     return;
   }
 
-  addLog(state, "info", `${deviceId} ARPs for ${nextHopIp}`, deviceId);
+  addLog(state, "info", `${deviceName(state, deviceId)} ARPs for ${nextHopIp}`, deviceId);
   const arp: ArpPacket = {
     kind: "request",
     senderIp: ownerIp,
@@ -438,9 +438,17 @@ function summarizeUnlinkedDrops(state: RuntimeState): void {
   if (drops.length === 0) return;
   const total = drops.reduce((sum, item) => sum + item.count, 0);
   const ports = drops
-    .map((item) => `${item.port.deviceId}.${item.port.portId}${item.count > 1 ? ` x${item.count}` : ""}`)
+    .map((item) => `${formatPortRef(state, item.port)}${item.count > 1 ? ` x${item.count}` : ""}`)
     .join(", ");
   addLog(state, "drop", `Dropped ${total} frame${total === 1 ? "" : "s"} on unlinked interface${drops.length === 1 ? "" : "s"}: ${ports}`);
+}
+
+function deviceName(state: RuntimeState, deviceId: DeviceId): string {
+  return getDevice(state, deviceId)?.name ?? deviceId;
+}
+
+function formatPortRef(state: RuntimeState, port: PortRef): string {
+  return `${deviceName(state, port.deviceId)}.${port.portId}`;
 }
 
 function cloneFrame(frame: EthernetFrame): EthernetFrame {
