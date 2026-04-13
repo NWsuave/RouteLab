@@ -100,7 +100,6 @@ h3 {
 
 .topology-pane,
 .config-pane,
-.run-pane,
 .results,
 .tables {
   background: #ffffff;
@@ -115,8 +114,7 @@ h3 {
   grid-column: 1 / 2;
 }
 
-.config-pane,
-.run-pane {
+.config-pane {
   grid-column: 2 / 3;
 }
 
@@ -125,8 +123,7 @@ h3 {
   grid-row: 1;
 }
 
-.results,
-.run-pane {
+.results {
   grid-row: 2;
 }
 
@@ -329,7 +326,6 @@ h3 {
 }
 
 .config-pane label,
-.run-pane label,
 .scenario-picker label {
   display: block;
   font-size: 0.82rem;
@@ -340,6 +336,12 @@ h3 {
 .form-grid {
   display: grid;
   gap: 0.65rem;
+}
+
+.host-ping-panel {
+  border-top: 1px solid #d9dfdc;
+  margin-top: 1rem;
+  padding-top: 1rem;
 }
 
 fieldset {
@@ -538,7 +540,6 @@ th {
   .scenario-picker,
   .topology-pane,
   .config-pane,
-  .run-pane,
   .results,
   .tables {
     margin-bottom: 1rem;

@@ -66,16 +66,6 @@ function render(): void {
         ${selectedDevice ? `<button id="delete-device" class="danger-button">Delete ${selectedDevice.name}</button>` : ""}
       </aside>
 
-      <section class="run-pane">
-        <h2>Ping</h2>
-        <div class="form-grid">
-          <label>From host <select id="ping-from">${topology.devices.filter((device) => device.kind === "host").map((device) => `<option value="${device.id}" ${device.id === ping.fromHostId ? "selected" : ""}>${device.name}</option>`).join("")}</select></label>
-          <label>To IP <input id="ping-to" value="${ping.toIp}" /></label>
-          <label>TTL <input id="ping-ttl" type="number" min="1" max="64" value="${ping.ttl ?? 8}" /></label>
-        </div>
-        <button id="run">Run deterministic simulation</button>
-      </section>
-
       <section class="results">
         <div>
           <h2>Traversal</h2>
@@ -242,11 +232,24 @@ function renderDeviceConfig(device: Device): string {
 
   if (device.kind === "host") {
     const config = device.ports[0].config;
+    const destinationIp = ping.fromHostId === device.id ? ping.toIp : defaultPingTargetIp(device.id);
     return `${base}
       <label>IP <input data-field="host-ip" value="${config.ip}" /></label>
       <label>Mask <input data-field="host-mask" type="number" value="${config.mask}" /></label>
       <label>MAC <input data-field="host-mac" value="${config.mac}" /></label>
       <label>Gateway <input data-field="host-gateway" value="${config.gateway ?? ""}" /></label>
+      <div class="host-ping-panel">
+        <h3>Send ping</h3>
+        <label>Destination device
+          <select id="host-ping-target">
+            <option value="">Custom IP</option>
+            ${pingDestinationOptions(device.id, destinationIp)}
+          </select>
+        </label>
+        <label>Destination IP <input id="host-ping-ip" value="${destinationIp}" /></label>
+        <label>TTL <input id="host-ping-ttl" type="number" min="1" max="64" value="${ping.fromHostId === device.id ? ping.ttl ?? 8 : 8}" /></label>
+        <button id="host-ping-run">Ping from ${device.name}</button>
+      </div>
     `;
   }
 
@@ -304,6 +307,32 @@ function tableBlock(title: string, headers: string[], rows: string[][]): string 
       </table>
     </div>
   `;
+}
+
+function pingDestinationOptions(sourceHostId: string, selectedIp: string): string {
+  return pingDestinations(sourceHostId).map((destination) => `
+    <option value="${destination.ip}" ${destination.ip === selectedIp ? "selected" : ""}>${destination.label}</option>
+  `).join("");
+}
+
+function defaultPingTargetIp(sourceHostId: string): string {
+  return pingDestinations(sourceHostId)[0]?.ip ?? ping.toIp;
+}
+
+function pingDestinations(sourceHostId: string): Array<{ label: string; ip: string }> {
+  return topology.devices.flatMap((device) => {
+    if (device.kind === "host") {
+      if (device.id === sourceHostId) return [];
+      return [{ label: `${device.name} (${device.ports[0].config.ip})`, ip: device.ports[0].config.ip }];
+    }
+    if (device.kind === "router") {
+      return device.ports.map((port) => ({
+        label: `${device.name} ${port.id} (${port.config.ip})`,
+        ip: port.config.ip,
+      }));
+    }
+    return [];
+  });
 }
 
 function frameBadge(frame: EthernetFrame): string {
@@ -424,11 +453,21 @@ function bindEvents(): void {
 
   document.querySelector<HTMLTextAreaElement>("#routes")?.addEventListener("change", (event) => updateRoutes((event.target as HTMLTextAreaElement).value));
 
-  document.querySelector<HTMLButtonElement>("#run")?.addEventListener("click", () => {
+  document.querySelector<HTMLSelectElement>("#host-ping-target")?.addEventListener("change", (event) => {
+    const selectedIp = (event.target as HTMLSelectElement).value;
+    if (selectedIp) {
+      const input = document.querySelector<HTMLInputElement>("#host-ping-ip");
+      if (input) input.value = selectedIp;
+    }
+  });
+
+  document.querySelector<HTMLButtonElement>("#host-ping-run")?.addEventListener("click", () => {
+    const host = topology.devices.find((device): device is Extract<Device, { kind: "host" }> => device.id === selectedDeviceId && device.kind === "host");
+    if (!host) return;
     ping = {
-      fromHostId: document.querySelector<HTMLSelectElement>("#ping-from")?.value ?? ping.fromHostId,
-      toIp: document.querySelector<HTMLInputElement>("#ping-to")?.value ?? ping.toIp,
-      ttl: Number(document.querySelector<HTMLInputElement>("#ping-ttl")?.value ?? 8),
+      fromHostId: host.id,
+      toIp: document.querySelector<HTMLInputElement>("#host-ping-ip")?.value ?? ping.toIp,
+      ttl: Number(document.querySelector<HTMLInputElement>("#host-ping-ttl")?.value ?? 8),
     };
     result = simulatePing(topology, ping);
     render();

@@ -10,7 +10,7 @@ RouteLab is a TypeScript MVP for a deterministic educational network simulator. 
 - Switches use 12 interfaces by default, named `p1` through `p12`
 - Router interfaces use short names, `e0` and `e1`
 - Optional device-box labels for host IP/MAC and both upper/lower router interface IPv4/MAC values
-- Device config panel for host addressing, router interfaces, and static routes
+- Device config panel for host addressing, host-initiated pings, router interfaces, and static routes
 - Event-driven simulation for Ethernet, ARP, IPv4, static routing, and ICMP ping
 - Switch source MAC learning, broadcast flooding, and unknown unicast flooding
 - ARP request broadcast and ARP reply unicast
