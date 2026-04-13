@@ -161,6 +161,23 @@ h3 {
   stroke-width: 4;
 }
 
+.link-label {
+  pointer-events: none;
+}
+
+.link-label rect {
+  fill: #ffffff;
+  stroke: #3d5a80;
+  stroke-width: 1.5;
+}
+
+.link-label text {
+  fill: #1d2527;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .subnet-group rect {
   fill-opacity: 0.32;
   stroke-dasharray: 6 5;

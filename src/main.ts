@@ -54,6 +54,7 @@ function render(): void {
         <svg id="topology-svg" class="topology" viewBox="0 0 900 360" role="img" aria-label="Network topology">
           ${renderSubnetGroups()}
           ${renderLinks(topology.links)}
+          ${renderLinkLabels(topology.links)}
           ${topology.devices.map(renderDevice).join("")}
         </svg>
         <p class="hint">${linkStart ? `Choose another device port to link from ${linkStart.deviceId}.${linkStart.portId}.` : `${selectedSample.description} Drag devices to reposition them.`}</p>
@@ -135,6 +136,26 @@ function renderLinks(links: Link[]): string {
     const b = topology.devices.find((device) => device.id === link.b.deviceId);
     if (!a || !b) return "";
     return `<line class="link" data-link="${link.id}" data-a-device="${link.a.deviceId}" data-b-device="${link.b.deviceId}" x1="${a.position.x}" y1="${a.position.y}" x2="${b.position.x}" y2="${b.position.y}" />`;
+  }).join("");
+}
+
+function renderLinkLabels(links: Link[]): string {
+  return links.map((link) => {
+    const a = topology.devices.find((device) => device.id === link.a.deviceId);
+    const b = topology.devices.find((device) => device.id === link.b.deviceId);
+    if (!a || !b) return "";
+    const aPoint = portLabelPoint(a, b);
+    const bPoint = portLabelPoint(b, a);
+    return `
+      <g class="link-label" data-label-link="${link.id}" data-label-device="${link.a.deviceId}" transform="translate(${aPoint.x} ${aPoint.y})">
+        <rect x="-22" y="-10" width="44" height="20" rx="6"></rect>
+        <text text-anchor="middle" dominant-baseline="central">${link.a.portId}</text>
+      </g>
+      <g class="link-label" data-label-link="${link.id}" data-label-device="${link.b.deviceId}" transform="translate(${bPoint.x} ${bPoint.y})">
+        <rect x="-22" y="-10" width="44" height="20" rx="6"></rect>
+        <text text-anchor="middle" dominant-baseline="central">${link.b.portId}</text>
+      </g>
+    `;
   }).join("");
 }
 
@@ -538,10 +559,39 @@ function moveDevicePreview(deviceId: string, x: number, y: number): void {
     line.setAttribute("x2", String(Math.round(x)));
     line.setAttribute("y2", String(Math.round(y)));
   });
+  updateLinkLabelPreview(deviceId, x, y);
 }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function updateLinkLabelPreview(deviceId: string, x: number, y: number): void {
+  for (const link of topology.links.filter((item) => item.a.deviceId === deviceId || item.b.deviceId === deviceId)) {
+    const movingDevice = topology.devices.find((device) => device.id === deviceId);
+    const peerId = link.a.deviceId === deviceId ? link.b.deviceId : link.a.deviceId;
+    const peerDevice = topology.devices.find((device) => device.id === peerId);
+    if (!movingDevice || !peerDevice) continue;
+    const movingPreview = { ...movingDevice, position: { x, y } } as Device;
+    const movingPoint = portLabelPoint(movingPreview, peerDevice);
+    const peerPoint = portLabelPoint(peerDevice, movingPreview);
+    document.querySelector<SVGGElement>(`[data-label-link="${link.id}"][data-label-device="${deviceId}"]`)
+      ?.setAttribute("transform", `translate(${Math.round(movingPoint.x)} ${Math.round(movingPoint.y)})`);
+    document.querySelector<SVGGElement>(`[data-label-link="${link.id}"][data-label-device="${peerId}"]`)
+      ?.setAttribute("transform", `translate(${Math.round(peerPoint.x)} ${Math.round(peerPoint.y)})`);
+  }
+}
+
+function portLabelPoint(device: Device, peer: Device): { x: number; y: number } {
+  const dx = peer.position.x - device.position.x;
+  const dy = peer.position.y - device.position.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const box = deviceBox(device);
+  const edgeDistance = Math.min(box.width / 2 + 22, box.height / 2 + 22);
+  return {
+    x: device.position.x + (dx / length) * edgeDistance,
+    y: device.position.y + (dy / length) * edgeDistance,
+  };
 }
 
 function nextId(prefix: string): string {
