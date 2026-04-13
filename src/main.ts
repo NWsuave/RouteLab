@@ -14,6 +14,7 @@ let ping: PingOptions = { ...samples[0].ping };
 let result = resetNetwork(topology);
 let showInterfaceLabels = false;
 let topologyDescription = samples[0].description;
+let diagramScale = 1;
 
 interface DragState {
   deviceId: string;
@@ -46,6 +47,11 @@ function render(): void {
           <button id="reset-network">Reset network</button>
           <button id="export-network">Export JSON</button>
           <label class="import-button">Import JSON<input id="import-network" type="file" accept="application/json,.json" /></label>
+          <label class="scale-control">Scale
+            <select id="diagram-scale">
+              ${[0.75, 1, 1.25].map((scale) => `<option value="${scale}" ${scale === diagramScale ? "selected" : ""}>${Math.round(scale * 100)}%</option>`).join("")}
+            </select>
+          </label>
           <label class="toggle"><input id="show-addresses" type="checkbox" ${showInterfaceLabels ? "checked" : ""} /> Show IP/MAC labels</label>
         </div>
         <svg id="topology-svg" class="topology" viewBox="0 0 900 360" role="img" aria-label="Network topology">
@@ -128,6 +134,8 @@ function renderLinks(links: Link[]): string {
 }
 
 function renderLinkLabels(links: Link[]): string {
+  const labelWidth = 44 * diagramScale;
+  const labelHeight = 20 * diagramScale;
   return links.map((link) => {
     const a = topology.devices.find((device) => device.id === link.a.deviceId);
     const b = topology.devices.find((device) => device.id === link.b.deviceId);
@@ -136,12 +144,12 @@ function renderLinkLabels(links: Link[]): string {
     const bPoint = portLabelPoint(b, a);
     return `
       <g class="link-label" data-label-link="${link.id}" data-label-device="${link.a.deviceId}" transform="translate(${aPoint.x} ${aPoint.y})">
-        <rect x="-22" y="-10" width="44" height="20" rx="6"></rect>
-        <text text-anchor="middle" dominant-baseline="central">${link.a.portId}</text>
+        <rect x="${-labelWidth / 2}" y="${-labelHeight / 2}" width="${labelWidth}" height="${labelHeight}" rx="${6 * diagramScale}"></rect>
+        <text text-anchor="middle" dominant-baseline="central" style="font-size: ${10 * diagramScale}px">${link.a.portId}</text>
       </g>
       <g class="link-label" data-label-link="${link.id}" data-label-device="${link.b.deviceId}" transform="translate(${bPoint.x} ${bPoint.y})">
-        <rect x="-22" y="-10" width="44" height="20" rx="6"></rect>
-        <text text-anchor="middle" dominant-baseline="central">${link.b.portId}</text>
+        <rect x="${-labelWidth / 2}" y="${-labelHeight / 2}" width="${labelWidth}" height="${labelHeight}" rx="${6 * diagramScale}"></rect>
+        <text text-anchor="middle" dominant-baseline="central" style="font-size: ${10 * diagramScale}px">${link.b.portId}</text>
       </g>
     `;
   }).join("");
@@ -154,8 +162,8 @@ function renderDevice(device: Device): string {
   return `
     <g class="device ${device.kind}${selected}" data-device="${device.id}" transform="translate(${device.position.x} ${device.position.y})" tabindex="0">
       ${renderDeviceSymbol(device)}
-      <text y="${box.labelY}" text-anchor="middle" class="device-name">${device.name}</text>
-      ${detailLines.map((line, index) => `<text y="${box.labelY + 15 + index * 13}" text-anchor="middle" class="address">${line}</text>`).join("")}
+      <text y="${box.labelY}" text-anchor="middle" class="device-name" style="font-size: ${12 * diagramScale}px">${device.name}</text>
+      ${detailLines.map((line, index) => `<text y="${box.labelY + 15 * diagramScale + index * 13 * diagramScale}" text-anchor="middle" class="address" style="font-size: ${9 * diagramScale}px">${line}</text>`).join("")}
     </g>
   `;
 }
@@ -167,57 +175,66 @@ function renderDeviceSymbol(device: Device): string {
 }
 
 function renderRouterSymbol(): string {
+  const radius = 45 * diagramScale;
+  const arrowOffset = 23 * diagramScale;
   return `
     <g class="router-symbol">
-      <circle class="router-disc" cx="0" cy="0" r="45"></circle>
-      ${routerArrow(0, -23, "up")}
-      ${routerArrow(0, 23, "down")}
-      ${routerArrow(-23, 0, "left")}
-      ${routerArrow(23, 0, "right")}
+      <circle class="router-disc" cx="0" cy="0" r="${radius}"></circle>
+      ${routerArrow(0, -arrowOffset, "up")}
+      ${routerArrow(0, arrowOffset, "down")}
+      ${routerArrow(-arrowOffset, 0, "left")}
+      ${routerArrow(arrowOffset, 0, "right")}
     </g>
   `;
 }
 
 function renderSwitchSymbol(): string {
+  const width = 100 * diagramScale;
+  const height = 84 * diagramScale;
+  const arrowX = 20 * diagramScale;
+  const arrowY = 18 * diagramScale;
   return `
     <g class="switch-symbol">
-      <rect class="switch-body" x="-50" y="-42" width="100" height="84" rx="10"></rect>
-      ${switchArrow(-20, -18, "left")}
-      ${switchArrow(20, -18, "right")}
-      ${switchArrow(-20, 18, "left")}
-      ${switchArrow(20, 18, "right")}
+      <rect class="switch-body" x="${-width / 2}" y="${-height / 2}" width="${width}" height="${height}" rx="${10 * diagramScale}"></rect>
+      ${switchArrow(-arrowX, -arrowY, "left")}
+      ${switchArrow(arrowX, -arrowY, "right")}
+      ${switchArrow(-arrowX, arrowY, "left")}
+      ${switchArrow(arrowX, arrowY, "right")}
     </g>
   `;
 }
 
 function renderHostSymbol(): string {
+  const s = diagramScale;
   return `
     <g class="host-symbol">
-      <rect class="host-monitor" x="-38" y="-34" width="76" height="50" rx="3"></rect>
-      <rect class="host-screen" x="-30" y="-27" width="60" height="34" rx="2"></rect>
-      <rect class="host-stand" x="-9" y="16" width="18" height="14"></rect>
-      <path class="host-base" d="M -27 33 H 27 L 34 42 H -34 Z"></path>
-      <line class="host-highlight" x1="-30" y1="-20" x2="30" y2="-20"></line>
+      <rect class="host-monitor" x="${-38 * s}" y="${-34 * s}" width="${76 * s}" height="${50 * s}" rx="${3 * s}"></rect>
+      <rect class="host-screen" x="${-30 * s}" y="${-27 * s}" width="${60 * s}" height="${34 * s}" rx="${2 * s}"></rect>
+      <rect class="host-stand" x="${-9 * s}" y="${16 * s}" width="${18 * s}" height="${14 * s}"></rect>
+      <path class="host-base" d="M ${-27 * s} ${33 * s} H ${27 * s} L ${34 * s} ${42 * s} H ${-34 * s} Z"></path>
+      <line class="host-highlight" x1="${-30 * s}" y1="${-20 * s}" x2="${30 * s}" y2="${-20 * s}"></line>
     </g>
   `;
 }
 
 function routerArrow(x: number, y: number, direction: "up" | "down" | "left" | "right"): string {
   const rotation = { right: 0, down: 90, left: 180, up: 270 }[direction];
+  const s = diagramScale;
   return `
     <g class="symbol-arrow" transform="translate(${x} ${y}) rotate(${rotation})">
-      <line x1="-10" y1="0" x2="7" y2="0"></line>
-      <path d="M 3 -5 L 10 0 L 3 5 Z"></path>
+      <line x1="${-10 * s}" y1="0" x2="${7 * s}" y2="0" style="stroke-width: ${8 * s}px"></line>
+      <path d="M ${3 * s} ${-5 * s} L ${10 * s} 0 L ${3 * s} ${5 * s} Z"></path>
     </g>
   `;
 }
 
 function switchArrow(x: number, y: number, direction: "up" | "down" | "left" | "right"): string {
   const rotation = { right: 0, down: 90, left: 180, up: 270 }[direction];
+  const s = diagramScale;
   return `
     <g class="symbol-arrow switch-arrow" transform="translate(${x} ${y}) rotate(${rotation})">
-      <line x1="-9" y1="0" x2="6" y2="0"></line>
-      <path d="M 2 -4 L 9 0 L 2 4 Z"></path>
+      <line x1="${-9 * s}" y1="0" x2="${6 * s}" y2="0" style="stroke-width: ${9 * s}px"></line>
+      <path d="M ${2 * s} ${-4 * s} L ${9 * s} 0 L ${2 * s} ${4 * s} Z"></path>
     </g>
   `;
 }
@@ -443,6 +460,11 @@ function bindEvents(): void {
     render();
   });
 
+  document.querySelector<HTMLSelectElement>("#diagram-scale")?.addEventListener("change", (event) => {
+    diagramScale = Number((event.target as HTMLSelectElement).value);
+    render();
+  });
+
   document.querySelector<HTMLButtonElement>("#delete-device")?.addEventListener("click", () => {
     deleteSelectedDevice();
     render();
@@ -649,7 +671,7 @@ function subnetGroups(): Array<{ label: string; x: number; y: number; width: num
   }
 
   return [...memberships.entries()].filter(([, boxes]) => boxes.length > 0).map(([label, boxes]) => {
-    const padding = 22;
+    const padding = 22 * diagramScale;
     const left = Math.max(8, Math.min(...boxes.map((box) => box.left)) - padding);
     const top = Math.max(8, Math.min(...boxes.map((box) => box.top)) - padding);
     const right = Math.min(892, Math.max(...boxes.map((box) => box.right)) + padding);
@@ -673,11 +695,12 @@ function routerInterfaceBounds(router: Extract<Device, { kind: "router" }>, port
   const peerId = link?.a.deviceId === router.id ? link.b.deviceId : link?.b.deviceId === router.id ? link.a.deviceId : undefined;
   const peer = peerId ? topology.devices.find((device) => device.id === peerId) : undefined;
   const point = peer ? routerInterfacePoint(router, peer) : { x: router.position.x, y: router.position.y };
+  const radius = 10 * diagramScale;
   return {
-    left: point.x - 10,
-    right: point.x + 10,
-    top: point.y - 10,
-    bottom: point.y + 10,
+    left: point.x - radius,
+    right: point.x + radius,
+    top: point.y - radius,
+    bottom: point.y + radius,
   };
 }
 
@@ -710,19 +733,24 @@ function intToIp(value: number): string {
 }
 
 function deviceBox(device: Device): { width: number; height: number; labelY: number } {
+  const scaled = (width: number, height: number, labelY: number) => ({
+    width: width * diagramScale,
+    height: height * diagramScale,
+    labelY: labelY * diagramScale,
+  });
   if (device.kind === "router") {
     return showInterfaceLabels
-      ? { width: 196, height: 144, labelY: 62 }
-      : { width: 100, height: 122, labelY: 62 };
+      ? scaled(196, 144, 62)
+      : scaled(100, 122, 62);
   }
   if (device.kind === "switch") {
     return showInterfaceLabels
-      ? { width: 136, height: 132, labelY: 58 }
-      : { width: 112, height: 118, labelY: 58 };
+      ? scaled(136, 132, 58)
+      : scaled(112, 118, 58);
   }
   return showInterfaceLabels
-    ? { width: 178, height: 112, labelY: 58 }
-    : { width: 86, height: 96, labelY: 58 };
+    ? scaled(178, 112, 58)
+    : scaled(86, 96, 58);
 }
 
 function interfaceLines(device: Device): string[] {
@@ -790,7 +818,7 @@ function portLabelPoint(device: Device, peer: Device): { x: number; y: number } 
   const dy = peer.position.y - device.position.y;
   const length = Math.hypot(dx, dy) || 1;
   const box = deviceBox(device);
-  const edgeDistance = Math.min(box.width / 2 + 22, box.height / 2 + 22);
+  const edgeDistance = Math.min(box.width / 2 + 22 * diagramScale, box.height / 2 + 22 * diagramScale);
   return {
     x: device.position.x + (dx / length) * edgeDistance,
     y: device.position.y + (dy / length) * edgeDistance,
@@ -802,8 +830,8 @@ function routerInterfacePoint(router: Extract<Device, { kind: "router" }>, peer:
   const dy = peer.position.y - router.position.y;
   const length = Math.hypot(dx, dy) || 1;
   return {
-    x: router.position.x + (dx / length) * 48,
-    y: router.position.y + (dy / length) * 48,
+    x: router.position.x + (dx / length) * 48 * diagramScale,
+    y: router.position.y + (dy / length) * 48 * diagramScale,
   };
 }
 

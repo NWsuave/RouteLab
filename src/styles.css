@@ -157,6 +157,19 @@ h3 {
   font-weight: 700;
 }
 
+.scale-control {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.4rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.scale-control select {
+  min-width: 5rem;
+  width: auto;
+}
+
 .toggle input {
   width: auto;
 }
