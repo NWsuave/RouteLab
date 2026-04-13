@@ -17,7 +17,7 @@ RouteLab is a TypeScript MVP for a deterministic educational network simulator. 
 - ARP request broadcast and ARP reply unicast
 - Host local-vs-remote subnet decision and default gateway usage
 - Router longest-prefix match, TTL decrement, and drop handling
-- Traversal timeline, ordered simulation log, switch MAC tables, ARP tables, and router routing tables
+- Traversal timeline, ordered simulation log, switch forwarding tables, ARP tables, and router routing tables
 - Built-in same-subnet, routed, and broken gateway scenarios
 
 Out of scope for this MVP: VLANs, DHCP, NAT, ACLs, TCP, STP, and dynamic routing.

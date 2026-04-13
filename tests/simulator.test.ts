@@ -1,6 +1,7 @@
 import assert from "assert";
 import { brokenConfigSample, routedSample, sameSubnetSample } from "../src/data/samples";
 import { resetNetwork, simulatePing } from "../src/sim/simulator";
+import { Topology } from "../src/sim/types";
 
 function messages(result: ReturnType<typeof simulatePing>): string {
   return result.log.map((entry) => entry.message).join("\n");
@@ -12,8 +13,8 @@ function testSameSubnetPing(): void {
   assert(messages(result).includes("Host A received ICMP echo reply"));
   assert(result.tables.switchMacTables.s1.some((row) => row.mac === "00:00:00:00:00:0a"));
   assert(result.tables.arpTables.h1.some((row) => row.ip === "10.0.0.20"));
-  assert(messages(result).includes("Dropped 10 frames on unlinked interfaces"));
-  assert(!messages(result).includes("s1.p3 is not linked"));
+  assert(result.traversals.some((item) => item.reason === "known unicast"));
+  assert(!messages(result).includes("unlinked interface"));
 }
 
 function testRoutedPing(): void {
@@ -44,10 +45,29 @@ function testResetNetwork(): void {
   assert(result.tables.routerRoutingTables.r1.some((row) => row.outPortId === "e0"));
 }
 
+function testUnlinkedDropsAreSummarized(): void {
+  const topology: Topology = {
+    devices: [
+      {
+        id: "h1",
+        name: "Host A",
+        kind: "host",
+        position: { x: 0, y: 0 },
+        ports: [{ id: "eth0", config: { ip: "10.0.0.10", mask: 24, mac: "00:00:00:00:00:0a" } }],
+      },
+    ],
+    links: [],
+  };
+  const result = simulatePing(topology, { fromHostId: "h1", toIp: "10.0.0.20" });
+  assert(messages(result).includes("Dropped 1 frame on unlinked interface: h1.eth0"));
+  assert(!messages(result).includes("h1.eth0 is not linked"));
+}
+
 testSameSubnetPing();
 testRoutedPing();
 testBrokenGateway();
 testTtlExpiration();
 testResetNetwork();
+testUnlinkedDropsAreSummarized();
 
 console.log("simulator tests passed");

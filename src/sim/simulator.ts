@@ -218,7 +218,9 @@ function receiveAtSwitch(state: RuntimeState, sw: SwitchDevice, inPortId: PortId
 
   const flood = frame.dstMac === BROADCAST || !table.has(frame.dstMac);
   const outPorts = flood
-    ? sw.ports.filter((port) => port.id !== inPortId).map((port) => port.id)
+    ? sw.ports
+      .filter((port) => port.id !== inPortId && hasLink(state.links, { deviceId: sw.id, portId: port.id }))
+      .map((port) => port.id)
     : [table.get(frame.dstMac)].filter((portId): portId is PortId => Boolean(portId) && portId !== inPortId);
 
   if (outPorts.length === 0) {
@@ -395,6 +397,10 @@ function findPortIp(state: RuntimeState, deviceId: DeviceId, portId: PortId): st
 
 function findLink(links: Link[], port: PortRef): Link | undefined {
   return links.find((link) => samePort(link.a, port) || samePort(link.b, port));
+}
+
+function hasLink(links: Link[], port: PortRef): boolean {
+  return Boolean(findLink(links, port));
 }
 
 function samePort(a: PortRef, b: PortRef): boolean {

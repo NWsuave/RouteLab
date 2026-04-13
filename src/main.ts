@@ -278,7 +278,7 @@ function renderDeviceConfig(device: Device): string {
 
 function renderTables(): string {
   const switchTables = Object.entries(result.tables.switchMacTables).map(([deviceId, rows]) => tableBlock(
-    `${deviceName(deviceId)} MAC table`,
+    `${deviceName(deviceId)} forwarding table`,
     ["MAC", "Port"],
     rows.map((row) => [row.mac, row.portId]),
   )).join("");
@@ -693,7 +693,7 @@ function interfaceLines(device: Device): string[] {
       `${port.id} MAC ${port.config.mac}`,
     ]);
   }
-  return [`Ports ${device.ports.map((port) => port.id).join(", ")}`];
+  return [];
 }
 
 function eventToSvgPoint(event: PointerEvent): DOMPoint | undefined {
