@@ -6,6 +6,9 @@ RouteLab is a TypeScript MVP for a deterministic educational network simulator. 
 
 - Topology editor with hosts, switches, routers, and point-to-point links
 - Drag devices on the topology canvas to position them
+- Delete selected devices from the config panel
+- Switches use 12 interfaces by default, named `p1` through `p12`
+- Router interfaces use short names, `e0` and `e1`
 - Optional device-box labels for host IP/MAC and both upper/lower router interface IPv4/MAC values
 - Device config panel for host addressing, router interfaces, and static routes
 - Event-driven simulation for Ethernet, ARP, IPv4, static routing, and ICMP ping
@@ -59,9 +62,9 @@ npm run build
 In the router config panel, enter one route per line:
 
 ```text
-192.168.3.0/24 192.168.2.2 g0/1
-0.0.0.0/0 192.168.1.254 g0/0
-10.0.5.0/24 direct g0/1
+192.168.3.0/24 192.168.2.2 e1
+0.0.0.0/0 192.168.1.254 e0
+10.0.5.0/24 direct e1
 ```
 
 `direct` means the router ARPs for the destination IP on the chosen outgoing port. Any other next-hop value is used as the ARP target.

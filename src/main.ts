@@ -63,6 +63,7 @@ function render(): void {
       <aside class="config-pane">
         <h2>Device config</h2>
         ${selectedDevice ? renderDeviceConfig(selectedDevice) : "<p>Select a device to edit it.</p>"}
+        ${selectedDevice ? `<button id="delete-device" class="danger-button">Delete ${selectedDevice.name}</button>` : ""}
       </aside>
 
       <section class="run-pane">
@@ -408,6 +409,11 @@ function bindEvents(): void {
     render();
   });
 
+  document.querySelector<HTMLButtonElement>("#delete-device")?.addEventListener("click", () => {
+    deleteSelectedDevice();
+    render();
+  });
+
   document.querySelectorAll<HTMLInputElement>("[data-field]").forEach((input) => {
     input.addEventListener("change", () => updateSelectedDevice(input.dataset.field ?? "", input.value));
   });
@@ -442,7 +448,7 @@ function addDevice(kind: DeviceKind): void {
     });
   }
   if (kind === "switch") {
-    topology.devices.push({ id, name: `Switch ${id.toUpperCase()}`, kind, position, ports: [{ id: "p1" }, { id: "p2" }, { id: "p3" }, { id: "p4" }] });
+    topology.devices.push({ id, name: `Switch ${id.toUpperCase()}`, kind, position, ports: switchPorts() });
   }
   if (kind === "router") {
     topology.devices.push({
@@ -451,13 +457,32 @@ function addDevice(kind: DeviceKind): void {
       kind,
       position,
       ports: [
-        { id: "g0/0", config: { ip: "192.168.1.1", mask: 24, mac: `02:00:00:00:01:${topology.devices.length.toString(16).padStart(2, "0")}` } },
-        { id: "g0/1", config: { ip: "192.168.2.1", mask: 24, mac: `02:00:00:00:02:${topology.devices.length.toString(16).padStart(2, "0")}` } },
+        { id: "e0", config: { ip: "192.168.1.1", mask: 24, mac: `02:00:00:00:01:${topology.devices.length.toString(16).padStart(2, "0")}` } },
+        { id: "e1", config: { ip: "192.168.2.1", mask: 24, mac: `02:00:00:00:02:${topology.devices.length.toString(16).padStart(2, "0")}` } },
       ],
       routes: [],
     });
   }
   selectedDeviceId = id;
+}
+
+function deleteSelectedDevice(): void {
+  const deletedId = selectedDeviceId;
+  topology.devices = topology.devices.filter((device) => device.id !== deletedId);
+  topology.links = topology.links.filter((link) => link.a.deviceId !== deletedId && link.b.deviceId !== deletedId);
+  if (linkStart?.deviceId === deletedId) {
+    linkStart = undefined;
+  }
+  const firstHost = topology.devices.find((device) => device.kind === "host");
+  if (ping.fromHostId === deletedId || !topology.devices.some((device) => device.id === ping.fromHostId)) {
+    ping = { ...ping, fromHostId: firstHost?.id ?? "" };
+  }
+  selectedDeviceId = topology.devices[0]?.id ?? "";
+  result = simulatePing(topology, ping);
+}
+
+function switchPorts(): Array<{ id: string }> {
+  return Array.from({ length: 12 }, (_, index) => ({ id: `p${index + 1}` }));
 }
 
 function updateSelectedDevice(field: string, value: string): void {

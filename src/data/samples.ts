@@ -31,7 +31,7 @@ export const sameSubnetSample: SampleScenario = {
         name: "Switch 1",
         kind: "switch",
         position: { x: 310, y: 120 },
-        ports: [{ id: "p1" }, { id: "p2" }],
+        ports: switchPorts(),
       },
       {
         id: "h2",
@@ -67,7 +67,7 @@ export const routedSample: SampleScenario = {
         name: "Switch 1",
         kind: "switch",
         position: { x: 240, y: 100 },
-        ports: [{ id: "p1" }, { id: "p2" }],
+        ports: switchPorts(),
       },
       {
         id: "r1",
@@ -75,8 +75,8 @@ export const routedSample: SampleScenario = {
         kind: "router",
         position: { x: 420, y: 100 },
         ports: [
-          { id: "g0/0", config: { ip: "10.0.1.1", mask: 24, mac: "00:00:00:00:01:01" } },
-          { id: "g0/1", config: { ip: "10.0.2.1", mask: 24, mac: "00:00:00:00:02:01" } },
+          { id: "e0", config: { ip: "10.0.1.1", mask: 24, mac: "00:00:00:00:01:01" } },
+          { id: "e1", config: { ip: "10.0.2.1", mask: 24, mac: "00:00:00:00:02:01" } },
         ],
         routes: [],
       },
@@ -85,7 +85,7 @@ export const routedSample: SampleScenario = {
         name: "Switch 2",
         kind: "switch",
         position: { x: 600, y: 100 },
-        ports: [{ id: "p1" }, { id: "p2" }],
+        ports: switchPorts(),
       },
       {
         id: "h2",
@@ -97,8 +97,8 @@ export const routedSample: SampleScenario = {
     ],
     links: [
       { id: "l1", a: { deviceId: "h1", portId: "eth0" }, b: { deviceId: "s1", portId: "p1" } },
-      { id: "l2", a: { deviceId: "s1", portId: "p2" }, b: { deviceId: "r1", portId: "g0/0" } },
-      { id: "l3", a: { deviceId: "r1", portId: "g0/1" }, b: { deviceId: "s2", portId: "p1" } },
+      { id: "l2", a: { deviceId: "s1", portId: "p2" }, b: { deviceId: "r1", portId: "e0" } },
+      { id: "l3", a: { deviceId: "r1", portId: "e1" }, b: { deviceId: "s2", portId: "p1" } },
       { id: "l4", a: { deviceId: "s2", portId: "p2" }, b: { deviceId: "h2", portId: "eth0" } },
     ],
   },
@@ -122,3 +122,7 @@ export const brokenConfigSample: SampleScenario = {
 };
 
 export const samples: SampleScenario[] = [sameSubnetSample, routedSample, brokenConfigSample];
+
+function switchPorts(): Array<{ id: string }> {
+  return Array.from({ length: 12 }, (_, index) => ({ id: `p${index + 1}` }));
+}

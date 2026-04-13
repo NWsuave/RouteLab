@@ -28,6 +28,14 @@ button {
   padding: 0.55rem 0.8rem;
 }
 
+.danger-button {
+  background: #fff5f5;
+  border-color: #a4161a;
+  color: #7f1115;
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
 input,
 select,
 textarea {

@@ -16,8 +16,8 @@ function testSameSubnetPing(): void {
 
 function testRoutedPing(): void {
   const result = simulatePing(routedSample.topology, routedSample.ping);
-  assert(messages(result).includes("Router 1 forwards 10.0.2.20 via g0/1; TTL 8 -> 7"));
-  assert(messages(result).includes("Router 1 forwards 10.0.1.10 via g0/0; TTL 8 -> 7"));
+  assert(messages(result).includes("Router 1 forwards 10.0.2.20 via e1; TTL 8 -> 7"));
+  assert(messages(result).includes("Router 1 forwards 10.0.1.10 via e0; TTL 8 -> 7"));
   assert(messages(result).includes("Host A received ICMP echo reply"));
   assert(result.tables.routerRoutingTables.r1.some((row) => row.prefix === "10.0.2.1"));
 }
