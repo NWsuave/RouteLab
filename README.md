@@ -5,6 +5,8 @@ RouteLab is a TypeScript MVP for a deterministic educational network simulator. 
 ## Features
 
 - Topology editor with hosts, switches, routers, and point-to-point links
+- Drag devices on the topology canvas to position them
+- Optional device-box labels for host IP/MAC and both upper/lower router interface IPv4/MAC values
 - Device config panel for host addressing, router interfaces, and static routes
 - Event-driven simulation for Ethernet, ARP, IPv4, static routing, and ICMP ping
 - Switch source MAC learning, broadcast flooding, and unknown unicast flooding

@@ -13,6 +13,18 @@ let selectedDeviceId = topology.devices[0]?.id ?? "";
 let linkStart: { deviceId: string; portId: string } | undefined;
 let ping: PingOptions = { ...selectedSample.ping };
 let result = simulatePing(topology, ping);
+let showInterfaceLabels = false;
+
+interface DragState {
+  deviceId: string;
+  startX: number;
+  startY: number;
+  pointerStartX: number;
+  pointerStartY: number;
+  moved: boolean;
+}
+
+let dragState: DragState | undefined;
 
 function render(): void {
   const selectedDevice = topology.devices.find((device) => device.id === selectedDeviceId);
@@ -37,12 +49,13 @@ function render(): void {
           <button data-add="switch">Add switch</button>
           <button data-add="router">Add router</button>
           <button id="clear-link">${linkStart ? "Cancel link" : "Link mode"}</button>
+          <label class="toggle"><input id="show-addresses" type="checkbox" ${showInterfaceLabels ? "checked" : ""} /> Show IP/MAC labels</label>
         </div>
-        <svg class="topology" viewBox="0 0 900 360" role="img" aria-label="Network topology">
+        <svg id="topology-svg" class="topology" viewBox="0 0 900 360" role="img" aria-label="Network topology">
           ${renderLinks(topology.links)}
           ${topology.devices.map(renderDevice).join("")}
         </svg>
-        <p class="hint">${linkStart ? `Choose another device port to link from ${linkStart.deviceId}.${linkStart.portId}.` : selectedSample.description}</p>
+        <p class="hint">${linkStart ? `Choose another device port to link from ${linkStart.deviceId}.${linkStart.portId}.` : `${selectedSample.description} Drag devices to reposition them.`}</p>
       </section>
 
       <aside class="config-pane">
@@ -90,18 +103,22 @@ function renderLinks(links: Link[]): string {
     const a = topology.devices.find((device) => device.id === link.a.deviceId);
     const b = topology.devices.find((device) => device.id === link.b.deviceId);
     if (!a || !b) return "";
-    return `<line class="link" x1="${a.position.x}" y1="${a.position.y}" x2="${b.position.x}" y2="${b.position.y}" />`;
+    return `<line class="link" data-link="${link.id}" data-a-device="${link.a.deviceId}" data-b-device="${link.b.deviceId}" x1="${a.position.x}" y1="${a.position.y}" x2="${b.position.x}" y2="${b.position.y}" />`;
   }).join("");
 }
 
 function renderDevice(device: Device): string {
   const selected = device.id === selectedDeviceId ? " selected" : "";
+  const box = deviceBox(device);
   const portLabel = device.kind === "host" ? "eth0" : device.ports.map((port) => port.id).join(" ");
+  const detailLines = showInterfaceLabels ? interfaceLines(device) : [];
   return `
-    <g class="device ${device.kind}${selected}" data-device="${device.id}" tabindex="0">
-      <rect x="${device.position.x - 48}" y="${device.position.y - 30}" width="96" height="60" rx="8"></rect>
-      <text x="${device.position.x}" y="${device.position.y - 4}" text-anchor="middle">${device.name}</text>
-      <text x="${device.position.x}" y="${device.position.y + 16}" text-anchor="middle" class="ports">${portLabel}</text>
+    <g class="device ${device.kind}${selected}" data-device="${device.id}" transform="translate(${device.position.x} ${device.position.y})" tabindex="0">
+      <rect x="${-box.width / 2}" y="${-box.height / 2}" width="${box.width}" height="${box.height}" rx="8"></rect>
+      <text y="${detailLines.length ? -box.height / 2 + 20 : -4}" text-anchor="middle">${device.name}</text>
+      ${detailLines.length
+        ? detailLines.map((line, index) => `<text y="${-box.height / 2 + 40 + index * 14}" text-anchor="middle" class="address">${line}</text>`).join("")
+        : `<text y="16" text-anchor="middle" class="ports">${portLabel}</text>`}
     </g>
   `;
 }
@@ -109,8 +126,6 @@ function renderDevice(device: Device): string {
 function renderDeviceConfig(device: Device): string {
   const base = `
     <label>Name <input data-field="name" value="${device.name}" /></label>
-    <label>X <input data-field="x" type="number" value="${device.position.x}" /></label>
-    <label>Y <input data-field="y" type="number" value="${device.position.y}" /></label>
   `;
 
   if (device.kind === "host") {
@@ -192,8 +207,48 @@ function bindEvents(): void {
   });
 
   document.querySelectorAll<SVGGElement>("[data-device]").forEach((node) => {
-    node.addEventListener("click", () => {
+    node.addEventListener("pointerdown", (event) => {
+      const svgPoint = eventToSvgPoint(event);
+      const device = topology.devices.find((item) => item.id === node.dataset.device);
+      if (!device || !svgPoint) return;
+      dragState = {
+        deviceId: device.id,
+        startX: device.position.x,
+        startY: device.position.y,
+        pointerStartX: svgPoint.x,
+        pointerStartY: svgPoint.y,
+        moved: false,
+      };
+      node.setPointerCapture(event.pointerId);
+    });
+
+    node.addEventListener("pointermove", (event) => {
+      if (!dragState || dragState.deviceId !== node.dataset.device) return;
+      const svgPoint = eventToSvgPoint(event);
+      if (!svgPoint) return;
+      const nextX = clamp(dragState.startX + svgPoint.x - dragState.pointerStartX, 55, 845);
+      const nextY = clamp(dragState.startY + svgPoint.y - dragState.pointerStartY, 45, 315);
+      const movedDistance = Math.abs(nextX - dragState.startX) + Math.abs(nextY - dragState.startY);
+      dragState.moved = dragState.moved || movedDistance > 3;
+      moveDevicePreview(dragState.deviceId, nextX, nextY);
+    });
+
+    node.addEventListener("pointerup", () => {
       const deviceId = node.dataset.device ?? "";
+      const wasDrag = dragState?.deviceId === deviceId && dragState.moved;
+      if (wasDrag) {
+        const device = topology.devices.find((item) => item.id === deviceId);
+        const transform = node.getAttribute("transform") ?? "";
+        const match = transform.match(/translate\(([-\d.]+)\s+([-\d.]+)\)/);
+        if (device && match) {
+          device.position.x = Number(match[1]);
+          device.position.y = Number(match[2]);
+        }
+        dragState = undefined;
+        render();
+        return;
+      }
+      dragState = undefined;
       if (linkStart && linkStart.deviceId !== deviceId) {
         const target = firstFreePort(deviceId);
         if (target) {
@@ -219,6 +274,11 @@ function bindEvents(): void {
   document.querySelector<HTMLButtonElement>("#clear-link")?.addEventListener("click", () => {
     const selected = topology.devices.find((device) => device.id === selectedDeviceId);
     linkStart = selected ? firstFreePort(selected.id) : undefined;
+    render();
+  });
+
+  document.querySelector<HTMLInputElement>("#show-addresses")?.addEventListener("change", (event) => {
+    showInterfaceLabels = (event.target as HTMLInputElement).checked;
     render();
   });
 
@@ -278,8 +338,6 @@ function updateSelectedDevice(field: string, value: string): void {
   const device = topology.devices.find((item) => item.id === selectedDeviceId);
   if (!device) return;
   if (field === "name") device.name = value;
-  if (field === "x") device.position.x = Number(value);
-  if (field === "y") device.position.y = Number(value);
   if (device.kind === "host") {
     const config = device.ports[0].config;
     if (field === "host-ip") config.ip = value;
@@ -317,9 +375,58 @@ function updateRoutes(text: string): void {
 function firstFreePort(deviceId: string): { deviceId: string; portId: string } | undefined {
   const device = topology.devices.find((item) => item.id === deviceId);
   if (!device) return undefined;
-  return device.ports.find((port) => !topology.links.some((link) => (link.a.deviceId === deviceId && link.a.portId === port.id) || (link.b.deviceId === deviceId && link.b.portId === port.id)))
-    ? { deviceId, portId: device.ports.find((port) => !topology.links.some((link) => (link.a.deviceId === deviceId && link.a.portId === port.id) || (link.b.deviceId === deviceId && link.b.portId === port.id)))!.id }
-    : undefined;
+  const port = device.ports.find((item) => !topology.links.some((link) => (link.a.deviceId === deviceId && link.a.portId === item.id) || (link.b.deviceId === deviceId && link.b.portId === item.id)));
+  return port ? { deviceId, portId: port.id } : undefined;
+}
+
+function deviceBox(device: Device): { width: number; height: number } {
+  if (!showInterfaceLabels) return { width: 96, height: 60 };
+  if (device.kind === "router") return { width: 190, height: 104 };
+  if (device.kind === "host") return { width: 170, height: 78 };
+  return { width: 126, height: 64 };
+}
+
+function interfaceLines(device: Device): string[] {
+  if (device.kind === "host") {
+    const config = device.ports[0].config;
+    return [`IP ${config.ip}/${config.mask}`, `MAC ${config.mac}`];
+  }
+  if (device.kind === "router") {
+    return device.ports.flatMap((port, index) => [
+      `${index === 0 ? "Upper" : "Lower"} ${port.id} IP ${port.config.ip}/${port.config.mask}`,
+      `${port.id} MAC ${port.config.mac}`,
+    ]);
+  }
+  return [`Ports ${device.ports.map((port) => port.id).join(", ")}`];
+}
+
+function eventToSvgPoint(event: PointerEvent): DOMPoint | undefined {
+  const svg = document.querySelector<SVGSVGElement>("#topology-svg");
+  if (!svg) return undefined;
+  const matrix = svg.getScreenCTM();
+  if (!matrix) return undefined;
+  const point = svg.createSVGPoint();
+  point.x = event.clientX;
+  point.y = event.clientY;
+  return point.matrixTransform(matrix.inverse());
+}
+
+function moveDevicePreview(deviceId: string, x: number, y: number): void {
+  const node = document.querySelector<SVGGElement>(`[data-device="${deviceId}"]`);
+  if (!node) return;
+  node.setAttribute("transform", `translate(${Math.round(x)} ${Math.round(y)})`);
+  document.querySelectorAll<SVGLineElement>(`[data-a-device="${deviceId}"]`).forEach((line) => {
+    line.setAttribute("x1", String(Math.round(x)));
+    line.setAttribute("y1", String(Math.round(y)));
+  });
+  document.querySelectorAll<SVGLineElement>(`[data-b-device="${deviceId}"]`).forEach((line) => {
+    line.setAttribute("x2", String(Math.round(x)));
+    line.setAttribute("y2", String(Math.round(y)));
+  });
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 function nextId(prefix: string): string {

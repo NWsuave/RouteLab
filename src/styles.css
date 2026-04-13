@@ -113,10 +113,23 @@ h3 {
 }
 
 .toolbar {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+}
+
+.toggle {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.4rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.toggle input {
+  width: auto;
 }
 
 .topology {
@@ -135,7 +148,13 @@ h3 {
 }
 
 .device {
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.device:active {
+  cursor: grabbing;
 }
 
 .device rect {
@@ -170,6 +189,11 @@ h3 {
 .device .ports {
   font-size: 10px;
   font-weight: 500;
+}
+
+.device .address {
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .hint {
