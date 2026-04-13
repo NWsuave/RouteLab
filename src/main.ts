@@ -14,7 +14,6 @@ let ping: PingOptions = { ...samples[0].ping };
 let result = resetNetwork(topology);
 let showInterfaceLabels = false;
 let topologyDescription = samples[0].description;
-let isTopologyFullscreen = false;
 
 interface DragState {
   deviceId: string;
@@ -38,14 +37,13 @@ function render(): void {
     </header>
 
     <main class="workspace">
-      <section id="topology-pane" class="topology-pane ${isTopologyFullscreen ? "is-fullscreen" : ""}">
+      <section class="topology-pane">
         <div class="toolbar">
           <button data-add="host">Add host</button>
           <button data-add="switch">Add switch</button>
           <button data-add="router">Add router</button>
           <button id="clear-link">${linkStart ? "Cancel link" : "Link mode"}</button>
           <button id="reset-network">Reset network</button>
-          <button id="fullscreen-network">${isTopologyFullscreen ? "Exit full screen" : "Full screen"}</button>
           <button id="export-network">Export JSON</button>
           <label class="import-button">Import JSON<input id="import-network" type="file" accept="application/json,.json" /></label>
           <label class="toggle"><input id="show-addresses" type="checkbox" ${showInterfaceLabels ? "checked" : ""} /> Show IP/MAC labels</label>
@@ -426,10 +424,6 @@ function bindEvents(): void {
     render();
   });
 
-  document.querySelector<HTMLButtonElement>("#fullscreen-network")?.addEventListener("click", () => {
-    toggleTopologyFullscreen();
-  });
-
   document.querySelector<HTMLButtonElement>("#export-network")?.addEventListener("click", () => {
     exportNetworkConfig();
   });
@@ -530,29 +524,6 @@ function exportNetworkConfig(): void {
   link.download = "routelab-network.json";
   link.click();
   URL.revokeObjectURL(url);
-}
-
-async function toggleTopologyFullscreen(): Promise<void> {
-  const pane = document.querySelector<HTMLElement>("#topology-pane");
-  if (!pane) return;
-  try {
-    if (document.fullscreenElement) {
-      await document.exitFullscreen();
-    } else if (pane.requestFullscreen) {
-      await pane.requestFullscreen();
-    } else {
-      isTopologyFullscreen = !isTopologyFullscreen;
-      render();
-    }
-  } catch {
-    isTopologyFullscreen = !isTopologyFullscreen;
-    render();
-  }
-}
-
-function syncFullscreenState(): void {
-  isTopologyFullscreen = document.fullscreenElement?.id === "topology-pane";
-  render();
 }
 
 function importNetworkConfig(input: HTMLInputElement): void {
@@ -854,5 +825,4 @@ function cloneTopology(source: Topology): Topology {
   return JSON.parse(JSON.stringify(source)) as Topology;
 }
 
-document.addEventListener("fullscreenchange", syncFullscreenState);
 render();
