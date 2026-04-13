@@ -47,11 +47,11 @@ function render(): void {
           <button id="reset-network">Reset network</button>
           <button id="export-network">Export JSON</button>
           <label class="import-button">Import JSON<input id="import-network" type="file" accept="application/json,.json" /></label>
-          <label class="scale-control">Scale
-            <select id="diagram-scale">
-              ${[0.75, 1, 1.25].map((scale) => `<option value="${scale}" ${scale === diagramScale ? "selected" : ""}>${Math.round(scale * 100)}%</option>`).join("")}
-            </select>
-          </label>
+          <div class="scale-control" aria-label="Diagram scale">
+            <span>Scale ${Math.round(diagramScale * 100)}%</span>
+            <button id="scale-down" aria-label="Shrink diagram">-</button>
+            <button id="scale-up" aria-label="Enlarge diagram">+</button>
+          </div>
           <label class="toggle"><input id="show-addresses" type="checkbox" ${showInterfaceLabels ? "checked" : ""} /> Show IP/MAC labels</label>
         </div>
         <svg id="topology-svg" class="topology" viewBox="0 0 900 360" role="img" aria-label="Network topology">
@@ -460,8 +460,13 @@ function bindEvents(): void {
     render();
   });
 
-  document.querySelector<HTMLSelectElement>("#diagram-scale")?.addEventListener("change", (event) => {
-    diagramScale = Number((event.target as HTMLSelectElement).value);
+  document.querySelector<HTMLButtonElement>("#scale-down")?.addEventListener("click", () => {
+    diagramScale = Math.max(0.1, Math.round((diagramScale - 0.1) * 10) / 10);
+    render();
+  });
+
+  document.querySelector<HTMLButtonElement>("#scale-up")?.addEventListener("click", () => {
+    diagramScale = Math.round((diagramScale + 0.1) * 10) / 10;
     render();
   });
 

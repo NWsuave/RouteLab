@@ -165,9 +165,9 @@ h3 {
   font-weight: 700;
 }
 
-.scale-control select {
-  min-width: 5rem;
-  width: auto;
+.scale-control button {
+  min-width: 2rem;
+  padding: 0.35rem 0.55rem;
 }
 
 .toggle input {
