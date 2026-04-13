@@ -181,13 +181,11 @@ function renderDeviceSymbol(device: Device): string {
 function renderRouterSymbol(): string {
   return `
     <g class="router-symbol">
-      <ellipse class="router-top" cx="0" cy="-9" rx="54" ry="22"></ellipse>
-      <path class="router-side" d="M -54 -9 C -50 18 -38 29 0 30 C 38 29 50 18 54 -9 L 54 10 C 49 31 31 41 0 42 C -31 41 -49 31 -54 10 Z"></path>
-      <ellipse class="router-rim" cx="0" cy="-9" rx="54" ry="22"></ellipse>
-      ${routerArrow(-19, -15, "right")}
-      ${routerArrow(19, -4, "left")}
-      ${routerArrow(0, -20, "down")}
-      ${routerArrow(0, 3, "up")}
+      <circle class="router-disc" cx="0" cy="0" r="45"></circle>
+      ${routerArrow(0, -23, "up")}
+      ${routerArrow(0, 23, "down")}
+      ${routerArrow(-23, 0, "left")}
+      ${routerArrow(23, 0, "right")}
     </g>
   `;
 }
@@ -195,14 +193,11 @@ function renderRouterSymbol(): string {
 function renderSwitchSymbol(): string {
   return `
     <g class="switch-symbol">
-      <polygon class="switch-top" points="-58,-24 44,-24 58,-12 -44,-12"></polygon>
-      <polygon class="switch-front" points="-44,-12 58,-12 58,22 -44,22"></polygon>
-      <polygon class="switch-side" points="44,-24 58,-12 58,22 44,10"></polygon>
-      <polyline class="switch-edge" points="-58,-24 44,-24 58,-12 58,22 -44,22 -58,10 -58,-24"></polyline>
-      ${switchArrow(-27, -17, "right")}
-      ${switchArrow(12, -17, "left")}
-      ${switchArrow(-8, -21, "down")}
-      ${switchArrow(-8, -12, "up")}
+      <rect class="switch-body" x="-50" y="-42" width="100" height="84" rx="10"></rect>
+      ${switchArrow(-20, -18, "left")}
+      ${switchArrow(20, -18, "right")}
+      ${switchArrow(-20, 18, "left")}
+      ${switchArrow(20, 18, "right")}
     </g>
   `;
 }
@@ -510,31 +505,37 @@ function firstFreePort(deviceId: string): { deviceId: string; portId: string } |
   return port ? { deviceId, portId: port.id } : undefined;
 }
 
+interface SubnetBox {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 function subnetGroups(): Array<{ label: string; x: number; y: number; width: number; height: number }> {
-  const memberships = new Map<string, Set<string>>();
+  const memberships = new Map<string, SubnetBox[]>();
   for (const device of topology.devices) {
-    for (const subnet of deviceSubnets(device)) {
-      const members = memberships.get(subnet) ?? new Set<string>();
-      members.add(device.id);
-      for (const neighborId of linkedSwitches(device.id)) {
-        members.add(neighborId);
+    if (device.kind === "host") {
+      const config = device.ports[0].config;
+      const subnet = subnetLabel(config.ip, config.mask);
+      const boxes = memberships.get(subnet) ?? [];
+      boxes.push(deviceBounds(device));
+      boxes.push(...linkedSwitches(device.id, "eth0").map(deviceBounds));
+      memberships.set(subnet, boxes);
+    }
+
+    if (device.kind === "router") {
+      for (const port of device.ports) {
+        const subnet = subnetLabel(port.config.ip, port.config.mask);
+        const boxes = memberships.get(subnet) ?? [];
+        boxes.push(routerInterfaceBounds(device, port.id));
+        boxes.push(...linkedSwitches(device.id, port.id).map(deviceBounds));
+        memberships.set(subnet, boxes);
       }
-      memberships.set(subnet, members);
     }
   }
 
-  return [...memberships.entries()].map(([label, deviceIds]) => {
-    const boxes = [...deviceIds].map((deviceId) => {
-      const device = topology.devices.find((item) => item.id === deviceId);
-      if (!device) return undefined;
-      const box = deviceBox(device);
-      return {
-        left: device.position.x - box.width / 2,
-        right: device.position.x + box.width / 2,
-        top: device.position.y - box.height / 2,
-        bottom: device.position.y + box.height / 2,
-      };
-    }).filter((box): box is { left: number; right: number; top: number; bottom: number } => Boolean(box));
+  return [...memberships.entries()].filter(([, boxes]) => boxes.length > 0).map(([label, boxes]) => {
     const padding = 22;
     const left = Math.max(8, Math.min(...boxes.map((box) => box.left)) - padding);
     const top = Math.max(8, Math.min(...boxes.map((box) => box.top)) - padding);
@@ -544,22 +545,38 @@ function subnetGroups(): Array<{ label: string; x: number; y: number; width: num
   });
 }
 
-function deviceSubnets(device: Device): string[] {
-  if (device.kind === "host") {
-    const config = device.ports[0].config;
-    return [subnetLabel(config.ip, config.mask)];
-  }
-  if (device.kind === "router") {
-    return device.ports.map((port) => subnetLabel(port.config.ip, port.config.mask));
-  }
-  return [];
+function deviceBounds(device: Device): SubnetBox {
+  const box = deviceBox(device);
+  return {
+    left: device.position.x - box.width / 2,
+    right: device.position.x + box.width / 2,
+    top: device.position.y - box.height / 2,
+    bottom: device.position.y + box.height / 2,
+  };
 }
 
-function linkedSwitches(deviceId: string): string[] {
+function routerInterfaceBounds(router: Extract<Device, { kind: "router" }>, portId: string): SubnetBox {
+  const link = topology.links.find((item) => (item.a.deviceId === router.id && item.a.portId === portId) || (item.b.deviceId === router.id && item.b.portId === portId));
+  const peerId = link?.a.deviceId === router.id ? link.b.deviceId : link?.b.deviceId === router.id ? link.a.deviceId : undefined;
+  const peer = peerId ? topology.devices.find((device) => device.id === peerId) : undefined;
+  const point = peer ? routerInterfacePoint(router, peer) : { x: router.position.x, y: router.position.y };
+  return {
+    left: point.x - 10,
+    right: point.x + 10,
+    top: point.y - 10,
+    bottom: point.y + 10,
+  };
+}
+
+function linkedSwitches(deviceId: string, portId: string): Device[] {
   return topology.links.flatMap((link) => {
-    const peer = link.a.deviceId === deviceId ? link.b.deviceId : link.b.deviceId === deviceId ? link.a.deviceId : undefined;
+    const peer = link.a.deviceId === deviceId && link.a.portId === portId
+      ? link.b.deviceId
+      : link.b.deviceId === deviceId && link.b.portId === portId
+        ? link.a.deviceId
+        : undefined;
     const peerDevice = peer ? topology.devices.find((device) => device.id === peer) : undefined;
-    return peerDevice?.kind === "switch" ? [peerDevice.id] : [];
+    return peerDevice?.kind === "switch" ? [peerDevice] : [];
   });
 }
 
@@ -582,13 +599,13 @@ function intToIp(value: number): string {
 function deviceBox(device: Device): { width: number; height: number; labelY: number } {
   if (device.kind === "router") {
     return showInterfaceLabels
-      ? { width: 196, height: 136, labelY: 60 }
-      : { width: 118, height: 82, labelY: 60 };
+      ? { width: 196, height: 144, labelY: 62 }
+      : { width: 100, height: 122, labelY: 62 };
   }
   if (device.kind === "switch") {
     return showInterfaceLabels
-      ? { width: 132, height: 96, labelY: 48 }
-      : { width: 124, height: 74, labelY: 48 };
+      ? { width: 136, height: 132, labelY: 58 }
+      : { width: 112, height: 118, labelY: 58 };
   }
   return showInterfaceLabels
     ? { width: 178, height: 112, labelY: 58 }
@@ -664,6 +681,16 @@ function portLabelPoint(device: Device, peer: Device): { x: number; y: number } 
   return {
     x: device.position.x + (dx / length) * edgeDistance,
     y: device.position.y + (dy / length) * edgeDistance,
+  };
+}
+
+function routerInterfacePoint(router: Extract<Device, { kind: "router" }>, peer: Device): { x: number; y: number } {
+  const dx = peer.position.x - router.position.x;
+  const dy = peer.position.y - router.position.y;
+  const length = Math.hypot(dx, dy) || 1;
+  return {
+    x: router.position.x + (dx / length) * 48,
+    y: router.position.y + (dy / length) * 48,
   };
 }
 

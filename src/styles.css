@@ -258,38 +258,17 @@ h3 {
   stroke-width: 3px;
 }
 
-.router-top,
-.switch-top {
-  fill: #1f8ee6;
-  stroke: #0c4f91;
-  stroke-width: 2;
-}
-
-.router-side,
-.switch-front,
-.switch-side {
-  fill: #126fbd;
-  stroke: #0c4f91;
-  stroke-width: 2;
-}
-
-.router-rim {
-  fill: none;
-  stroke: #66b9ff;
-  stroke-width: 2;
-}
-
-.switch-edge {
-  fill: none;
-  stroke: #0c4f91;
-  stroke-linejoin: round;
+.router-disc,
+.switch-body {
+  fill: #050505;
+  stroke: #050505;
   stroke-width: 2;
 }
 
 .symbol-arrow line {
   stroke: #ffffff;
   stroke-linecap: round;
-  stroke-width: 3;
+  stroke-width: 8;
 }
 
 .symbol-arrow path {
@@ -298,7 +277,7 @@ h3 {
 }
 
 .switch-arrow line {
-  stroke-width: 2.5;
+  stroke-width: 9;
 }
 
 .host-monitor {
@@ -325,13 +304,8 @@ h3 {
   stroke-width: 1.5;
 }
 
-.device.selected .router-top,
-.device.selected .router-side,
-.device.selected .router-rim,
-.device.selected .switch-top,
-.device.selected .switch-front,
-.device.selected .switch-side,
-.device.selected .switch-edge,
+.device.selected .router-disc,
+.device.selected .switch-body,
 .device.selected .host-monitor,
 .device.selected .host-screen,
 .device.selected .host-stand,
