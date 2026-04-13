@@ -112,6 +112,20 @@ h3 {
   grid-column: 2 / 3;
 }
 
+.topology-pane,
+.config-pane {
+  grid-row: 1;
+}
+
+.results,
+.run-pane {
+  grid-row: 2;
+}
+
+.tables {
+  grid-row: 3;
+}
+
 .toolbar {
   align-items: center;
   display: flex;
