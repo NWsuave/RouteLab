@@ -40,19 +40,25 @@ function render(): void {
     <main class="workspace">
       <section class="topology-pane">
         <div class="toolbar">
-          <button data-add="host">Add host</button>
-          <button data-add="switch">Add switch</button>
-          <button data-add="router">Add router</button>
-          <button id="clear-link">${linkStart ? "Cancel link" : "Link mode"}</button>
-          <button id="reset-network">Reset network</button>
-          <button id="export-network">Export JSON</button>
-          <label class="import-button">Import JSON<input id="import-network" type="file" accept="application/json,.json" /></label>
+          <div class="tool-group">
+            <button data-add="host">Host</button>
+            <button data-add="switch">Switch</button>
+            <button data-add="router">Router</button>
+          </div>
+          <div class="tool-group">
+            <button id="clear-link">${linkStart ? "Cancel link" : "Link"}</button>
+            <button id="reset-network">Reset</button>
+          </div>
           <div class="scale-control" aria-label="Diagram scale">
             <span>Scale ${Math.round(diagramScale * 100)}%</span>
             <button id="scale-down" aria-label="Shrink diagram">-</button>
             <button id="scale-up" aria-label="Enlarge diagram">+</button>
           </div>
-          <label class="toggle"><input id="show-addresses" type="checkbox" ${showInterfaceLabels ? "checked" : ""} /> Show IP/MAC labels</label>
+          <div class="tool-group secondary-tools">
+            <button id="export-network">Export</button>
+            <label class="import-button">Import<input id="import-network" type="file" accept="application/json,.json" /></label>
+          </div>
+          <label class="toggle"><input id="show-addresses" type="checkbox" ${showInterfaceLabels ? "checked" : ""} /> IP/MAC labels</label>
         </div>
         <svg id="topology-svg" class="topology" viewBox="0 0 900 360" role="img" aria-label="Network topology">
           ${renderSubnetGroups()}
