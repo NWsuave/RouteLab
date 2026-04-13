@@ -65,9 +65,8 @@ npm run build
 In the router config panel, enter one route per line:
 
 ```text
-192.168.3.0/24 192.168.2.2 e1
-0.0.0.0/0 192.168.1.254 e0
-10.0.5.0/24 direct e1
+192.168.3.0/24 192.168.2.2
+0.0.0.0/0 192.168.1.254
 ```
 
-`direct` means the router ARPs for the destination IP on the chosen outgoing port. Any other next-hop value is used as the ARP target.
+The outgoing interface is inferred from the connected subnet that contains the next hop.

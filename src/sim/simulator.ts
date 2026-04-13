@@ -336,14 +336,16 @@ function receiveAtRouter(state: RuntimeState, router: RouterDevice, inPortId: Po
     return;
   }
 
-  const outPort = router.ports.find((port) => port.id === route.outPortId);
+  const routeTargetIp = route.nextHop ?? packet.dstIp;
+  const outPortId = route.outPortId ?? egressPortFor(router, routeTargetIp);
+  const outPort = router.ports.find((port) => port.id === outPortId);
   if (!outPort) {
-    addLog(state, "drop", `${router.name} route to ${packet.dstIp} uses missing port ${route.outPortId}`, router.id);
+    addLog(state, "drop", `${router.name} dropped packet to ${packet.dstIp}: next hop ${routeTargetIp} is not reachable on a connected interface`, router.id);
     return;
   }
 
   const forwarded: IPv4Packet = { ...packet, ttl: packet.ttl - 1 };
-  const nextHopIp = route.nextHop ?? packet.dstIp;
+  const nextHopIp = routeTargetIp;
   addLog(state, "info", `${router.name} forwards ${packet.dstIp} via ${outPort.id}; TTL ${packet.ttl} -> ${forwarded.ttl}`, router.id);
   sendIpFromDevice(state, router.id, outPort.id, outPort.config.mac, nextHopIp, forwarded);
 }
@@ -361,6 +363,12 @@ function connectedRoutes(router: RouterDevice): StaticRoute[] {
     mask: port.config.mask,
     outPortId: port.id,
   }));
+}
+
+function egressPortFor(router: RouterDevice, targetIp: string): PortId | undefined {
+  return connectedRoutes(router)
+    .filter((route) => containsIp(route.prefix, route.mask, targetIp))
+    .sort((a, b) => b.mask - a.mask)[0]?.outPortId;
 }
 
 function flushPending(state: RuntimeState, deviceId: DeviceId, ip: string, mac: string): void {

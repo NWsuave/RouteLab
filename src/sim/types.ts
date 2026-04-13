@@ -31,7 +31,7 @@ export interface StaticRoute {
   prefix: string;
   mask: number;
   nextHop?: string;
-  outPortId: PortId;
+  outPortId?: PortId;
 }
 
 export interface BaseDevice {

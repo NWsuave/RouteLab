@@ -280,9 +280,9 @@ function renderDeviceConfig(device: Device): string {
         `).join("")}
       </div>
       <label>Static routes
-        <textarea id="routes">${device.routes.map((route) => `${route.prefix}/${route.mask} ${route.nextHop ?? "direct"} ${route.outPortId}`).join("\n")}</textarea>
+        <textarea id="routes">${device.routes.map((route) => `${route.prefix}/${route.mask} ${route.nextHop ?? "direct"}`).join("\n")}</textarea>
       </label>
-      <small>Format: prefix/mask nextHop-or-direct outPort</small>
+      <small>Format: prefix/mask nextHop-or-direct</small>
     `;
   }
 
@@ -305,7 +305,7 @@ function renderTables(): string {
   const routeTables = Object.entries(result.tables.routerRoutingTables).map(([deviceId, rows]) => tableBlock(
     `${deviceName(deviceId)} routing table`,
     ["Prefix", "Next hop", "Port"],
-    rows.map((row) => [`${row.prefix}/${row.mask}`, row.nextHop ?? "direct", row.outPortId]),
+    rows.map((row) => [`${row.prefix}/${row.mask}`, row.nextHop ?? "direct", routePortLabel(deviceId, row)]),
   )).join("");
 
   return `<div class="table-grid">${switchTables}${arpTables}${routeTables}</div>`;
@@ -321,6 +321,14 @@ function tableBlock(title: string, headers: string[], rows: string[][]): string 
       </table>
     </div>
   `;
+}
+
+function routePortLabel(deviceId: string, route: { nextHop?: string; outPortId?: string }): string {
+  if (route.outPortId) return route.outPortId;
+  const router = topology.devices.find((device): device is Extract<Device, { kind: "router" }> => device.id === deviceId && device.kind === "router");
+  const nextHop = route.nextHop;
+  if (!router || !nextHop) return "inferred";
+  return router.ports.find((port) => sameSubnetLocal(port.config.ip, nextHop, port.config.mask))?.id ?? "unreachable";
 }
 
 function pingDestinationOptions(sourceHostId: string, selectedIp: string): string {
@@ -630,9 +638,9 @@ function updateRoutes(text: string): void {
   const device = topology.devices.find((item): item is Extract<Device, { kind: "router" }> => item.id === selectedDeviceId && item.kind === "router");
   if (!device) return;
   device.routes = text.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
-    const [prefixMask, nextHop, outPortId] = line.split(/\s+/);
+    const [prefixMask, nextHop] = line.split(/\s+/);
     const [prefix, mask] = prefixMask.split("/");
-    return { prefix, mask: Number(mask), nextHop: nextHop === "direct" ? undefined : nextHop, outPortId };
+    return { prefix, mask: Number(mask), nextHop: nextHop === "direct" ? undefined : nextHop };
   });
   result = simulatePing(topology, ping);
   render();
@@ -723,6 +731,11 @@ function linkedSwitches(deviceId: string, portId: string): Device[] {
 
 function subnetLabel(ip: string, mask: number): string {
   return `${intToIp(ipToIntLocal(ip) & maskToIntLocal(mask))}/${mask}`;
+}
+
+function sameSubnetLocal(a: string, b: string, mask: number): boolean {
+  const maskInt = maskToIntLocal(mask);
+  return (ipToIntLocal(a) & maskInt) === (ipToIntLocal(b) & maskInt);
 }
 
 function ipToIntLocal(ip: string): number {
