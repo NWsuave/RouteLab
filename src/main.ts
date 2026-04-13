@@ -162,15 +162,79 @@ function renderLinkLabels(links: Link[]): string {
 function renderDevice(device: Device): string {
   const selected = device.id === selectedDeviceId ? " selected" : "";
   const box = deviceBox(device);
-  const portLabel = device.kind === "host" ? "eth0" : device.ports.map((port) => port.id).join(" ");
   const detailLines = showInterfaceLabels ? interfaceLines(device) : [];
   return `
     <g class="device ${device.kind}${selected}" data-device="${device.id}" transform="translate(${device.position.x} ${device.position.y})" tabindex="0">
-      <rect x="${-box.width / 2}" y="${-box.height / 2}" width="${box.width}" height="${box.height}" rx="8"></rect>
-      <text y="${detailLines.length ? -box.height / 2 + 20 : -4}" text-anchor="middle">${device.name}</text>
-      ${detailLines.length
-        ? detailLines.map((line, index) => `<text y="${-box.height / 2 + 40 + index * 14}" text-anchor="middle" class="address">${line}</text>`).join("")
-        : `<text y="16" text-anchor="middle" class="ports">${portLabel}</text>`}
+      ${renderDeviceSymbol(device)}
+      <text y="${box.labelY}" text-anchor="middle" class="device-name">${device.name}</text>
+      ${detailLines.map((line, index) => `<text y="${box.labelY + 15 + index * 13}" text-anchor="middle" class="address">${line}</text>`).join("")}
+    </g>
+  `;
+}
+
+function renderDeviceSymbol(device: Device): string {
+  if (device.kind === "router") return renderRouterSymbol();
+  if (device.kind === "switch") return renderSwitchSymbol();
+  return renderHostSymbol();
+}
+
+function renderRouterSymbol(): string {
+  return `
+    <g class="router-symbol">
+      <ellipse class="router-top" cx="0" cy="-9" rx="54" ry="22"></ellipse>
+      <path class="router-side" d="M -54 -9 C -50 18 -38 29 0 30 C 38 29 50 18 54 -9 L 54 10 C 49 31 31 41 0 42 C -31 41 -49 31 -54 10 Z"></path>
+      <ellipse class="router-rim" cx="0" cy="-9" rx="54" ry="22"></ellipse>
+      ${routerArrow(-19, -15, "right")}
+      ${routerArrow(19, -4, "left")}
+      ${routerArrow(0, -20, "down")}
+      ${routerArrow(0, 3, "up")}
+    </g>
+  `;
+}
+
+function renderSwitchSymbol(): string {
+  return `
+    <g class="switch-symbol">
+      <polygon class="switch-top" points="-58,-24 44,-24 58,-12 -44,-12"></polygon>
+      <polygon class="switch-front" points="-44,-12 58,-12 58,22 -44,22"></polygon>
+      <polygon class="switch-side" points="44,-24 58,-12 58,22 44,10"></polygon>
+      <polyline class="switch-edge" points="-58,-24 44,-24 58,-12 58,22 -44,22 -58,10 -58,-24"></polyline>
+      ${switchArrow(-27, -17, "right")}
+      ${switchArrow(12, -17, "left")}
+      ${switchArrow(-8, -21, "down")}
+      ${switchArrow(-8, -12, "up")}
+    </g>
+  `;
+}
+
+function renderHostSymbol(): string {
+  return `
+    <g class="host-symbol">
+      <rect class="host-monitor" x="-38" y="-34" width="76" height="50" rx="3"></rect>
+      <rect class="host-screen" x="-30" y="-27" width="60" height="34" rx="2"></rect>
+      <rect class="host-stand" x="-9" y="16" width="18" height="14"></rect>
+      <path class="host-base" d="M -27 33 H 27 L 34 42 H -34 Z"></path>
+      <line class="host-highlight" x1="-30" y1="-20" x2="30" y2="-20"></line>
+    </g>
+  `;
+}
+
+function routerArrow(x: number, y: number, direction: "up" | "down" | "left" | "right"): string {
+  const rotation = { right: 0, down: 90, left: 180, up: 270 }[direction];
+  return `
+    <g class="symbol-arrow" transform="translate(${x} ${y}) rotate(${rotation})">
+      <line x1="-10" y1="0" x2="7" y2="0"></line>
+      <path d="M 3 -5 L 10 0 L 3 5 Z"></path>
+    </g>
+  `;
+}
+
+function switchArrow(x: number, y: number, direction: "up" | "down" | "left" | "right"): string {
+  const rotation = { right: 0, down: 90, left: 180, up: 270 }[direction];
+  return `
+    <g class="symbol-arrow switch-arrow" transform="translate(${x} ${y}) rotate(${rotation})">
+      <line x1="-9" y1="0" x2="6" y2="0"></line>
+      <path d="M 2 -4 L 9 0 L 2 4 Z"></path>
     </g>
   `;
 }
@@ -515,11 +579,20 @@ function intToIp(value: number): string {
   return [24, 16, 8, 0].map((shift) => (value >>> shift) & 255).join(".");
 }
 
-function deviceBox(device: Device): { width: number; height: number } {
-  if (!showInterfaceLabels) return { width: 96, height: 60 };
-  if (device.kind === "router") return { width: 190, height: 104 };
-  if (device.kind === "host") return { width: 170, height: 78 };
-  return { width: 126, height: 64 };
+function deviceBox(device: Device): { width: number; height: number; labelY: number } {
+  if (device.kind === "router") {
+    return showInterfaceLabels
+      ? { width: 196, height: 136, labelY: 60 }
+      : { width: 118, height: 82, labelY: 60 };
+  }
+  if (device.kind === "switch") {
+    return showInterfaceLabels
+      ? { width: 132, height: 96, labelY: 48 }
+      : { width: 124, height: 74, labelY: 48 };
+  }
+  return showInterfaceLabels
+    ? { width: 178, height: 112, labelY: 58 }
+    : { width: 86, height: 96, labelY: 58 };
 }
 
 function interfaceLines(device: Device): string[] {

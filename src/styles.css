@@ -235,43 +235,110 @@ h3 {
   cursor: grabbing;
 }
 
-.device rect {
-  fill: #ffffff;
-  stroke: #233d4d;
-  stroke-width: 2;
-}
-
-.device.host rect {
-  fill: #d8f3dc;
-}
-
-.device.switch rect {
-  fill: #d7e3fc;
-}
-
-.device.router rect {
-  fill: #ffe8cc;
-}
-
-.device.selected rect {
-  stroke: #d62828;
-  stroke-width: 4;
+.device-name {
+  fill: #111111;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .device text {
-  fill: #1d2527;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.device .ports {
-  font-size: 10px;
-  font-weight: 500;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-linejoin: round;
+  stroke-width: 3px;
 }
 
 .device .address {
-  font-size: 10px;
+  fill: #111111;
+  font-size: 9px;
   font-weight: 600;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-linejoin: round;
+  stroke-width: 3px;
+}
+
+.router-top,
+.switch-top {
+  fill: #1f8ee6;
+  stroke: #0c4f91;
+  stroke-width: 2;
+}
+
+.router-side,
+.switch-front,
+.switch-side {
+  fill: #126fbd;
+  stroke: #0c4f91;
+  stroke-width: 2;
+}
+
+.router-rim {
+  fill: none;
+  stroke: #66b9ff;
+  stroke-width: 2;
+}
+
+.switch-edge {
+  fill: none;
+  stroke: #0c4f91;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.symbol-arrow line {
+  stroke: #ffffff;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.symbol-arrow path {
+  fill: #ffffff;
+  stroke: none;
+}
+
+.switch-arrow line {
+  stroke-width: 2.5;
+}
+
+.host-monitor {
+  fill: #d8d1bf;
+  stroke: #6f6a5e;
+  stroke-width: 2;
+}
+
+.host-screen {
+  fill: #f5f2e8;
+  stroke: #827b6c;
+  stroke-width: 1.5;
+}
+
+.host-stand,
+.host-base {
+  fill: #bfb7a5;
+  stroke: #6f6a5e;
+  stroke-width: 2;
+}
+
+.host-highlight {
+  stroke: #ffffff;
+  stroke-width: 1.5;
+}
+
+.device.selected .router-top,
+.device.selected .router-side,
+.device.selected .router-rim,
+.device.selected .switch-top,
+.device.selected .switch-front,
+.device.selected .switch-side,
+.device.selected .switch-edge,
+.device.selected .host-monitor,
+.device.selected .host-screen,
+.device.selected .host-stand,
+.device.selected .host-base {
+  filter: drop-shadow(0 0 0.2rem #d62828);
+  stroke: #d62828;
+  stroke-width: 3;
 }
 
 .hint {
