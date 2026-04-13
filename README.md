@@ -8,6 +8,7 @@ RouteLab is a TypeScript MVP for a deterministic educational network simulator. 
 - Drag devices on the topology canvas to position them
 - Delete selected devices from the config panel
 - Reset the network to clear learned MAC/ARP tables and traversal/log output
+- Export and import network configurations as JSON files
 - Switches use 12 interfaces by default, named `p1` through `p12`
 - Router interfaces use short names, `e0` and `e1`
 - Optional device-box labels for host IP/MAC and both upper/lower router interface IPv4/MAC values

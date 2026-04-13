@@ -28,6 +28,20 @@ button {
   padding: 0.55rem 0.8rem;
 }
 
+.import-button {
+  border: 1px solid #1d2527;
+  border-radius: 6px;
+  background: #f4c542;
+  color: #1d2527;
+  cursor: pointer;
+  display: inline-block;
+  padding: 0.55rem 0.8rem;
+}
+
+.import-button input {
+  display: none;
+}
+
 .danger-button {
   background: #fff5f5;
   border-color: #a4161a;
@@ -85,10 +99,6 @@ h3 {
   letter-spacing: 0;
   margin-bottom: 0.15rem;
   text-transform: uppercase;
-}
-
-.scenario-picker {
-  min-width: 16rem;
 }
 
 .workspace {
@@ -325,8 +335,7 @@ h3 {
   margin: 0.75rem 0 0;
 }
 
-.config-pane label,
-.scenario-picker label {
+.config-pane label {
   display: block;
   font-size: 0.82rem;
   font-weight: 700;
@@ -537,7 +546,6 @@ th {
     display: block;
   }
 
-  .scenario-picker,
   .topology-pane,
   .config-pane,
   .results,

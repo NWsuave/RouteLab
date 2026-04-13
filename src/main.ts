@@ -1,4 +1,4 @@
-import { samples, SampleScenario } from "./data/samples";
+import { samples } from "./data/samples";
 import { resetNetwork, simulatePing } from "./sim/simulator";
 import { Device, DeviceKind, EthernetFrame, Link, PingOptions, Topology } from "./sim/types";
 import "./styles.css";
@@ -7,13 +7,13 @@ const appRoot = document.querySelector<HTMLDivElement>("#app");
 if (!appRoot) throw new Error("Missing #app");
 const root = appRoot;
 
-let selectedSample = samples[0];
-let topology = cloneTopology(selectedSample.topology);
+let topology = cloneTopology(samples[0].topology);
 let selectedDeviceId = topology.devices[0]?.id ?? "";
 let linkStart: { deviceId: string; portId: string } | undefined;
-let ping: PingOptions = { ...selectedSample.ping };
+let ping: PingOptions = { ...samples[0].ping };
 let result = resetNetwork(topology);
 let showInterfaceLabels = false;
+let topologyDescription = samples[0].description;
 
 interface DragState {
   deviceId: string;
@@ -34,12 +34,6 @@ function render(): void {
         <p class="eyebrow">Deterministic network simulator</p>
         <h1>RouteLab</h1>
       </div>
-      <div class="scenario-picker">
-        <label for="sample">Scenario</label>
-        <select id="sample">
-          ${samples.map((sample) => `<option value="${sample.id}" ${sample.id === selectedSample.id ? "selected" : ""}>${sample.name}</option>`).join("")}
-        </select>
-      </div>
     </header>
 
     <main class="workspace">
@@ -50,6 +44,8 @@ function render(): void {
           <button data-add="router">Add router</button>
           <button id="clear-link">${linkStart ? "Cancel link" : "Link mode"}</button>
           <button id="reset-network">Reset network</button>
+          <button id="export-network">Export JSON</button>
+          <label class="import-button">Import JSON<input id="import-network" type="file" accept="application/json,.json" /></label>
           <label class="toggle"><input id="show-addresses" type="checkbox" ${showInterfaceLabels ? "checked" : ""} /> Show IP/MAC labels</label>
         </div>
         <svg id="topology-svg" class="topology" viewBox="0 0 900 360" role="img" aria-label="Network topology">
@@ -58,7 +54,7 @@ function render(): void {
           ${renderLinkLabels(topology.links)}
           ${topology.devices.map(renderDevice).join("")}
         </svg>
-        <p class="hint">${linkStart ? `Choose another device port to link from ${formatPortRef(linkStart)}.` : `${selectedSample.description} Drag devices to reposition them.`}</p>
+        <p class="hint">${linkStart ? `Choose another device port to link from ${formatPortRef(linkStart)}.` : `${topologyDescription} Drag devices to reposition them.`}</p>
       </section>
 
       <aside class="config-pane">
@@ -76,7 +72,7 @@ function render(): void {
                 <span class="step-index">${item.id}</span>
                 <div class="step-body">
                   <div class="step-title">
-                    <span>${item.reason}</span>
+                    <span>${traversalReason(item.reason)}</span>
                     <span class="protocol-badge">${frameBadge(item.frame)}</span>
                   </div>
                   <div class="step-meta">${formatPortRef(item.from)} <span>to</span> ${formatPortRef(item.to)}</div>
@@ -340,6 +336,12 @@ function frameBadge(frame: EthernetFrame): string {
   return frame.etherType;
 }
 
+function traversalReason(reason: string): string {
+  if (reason === "known unicast") return "Known unicast";
+  if (reason === "flood") return "Flood";
+  return reason;
+}
+
 function frameDetail(frame: EthernetFrame): string {
   if (frame.etherType === "ARP") {
     const arp = frame.payload as { kind: string; senderIp: string; targetIp: string };
@@ -352,17 +354,6 @@ function frameDetail(frame: EthernetFrame): string {
 }
 
 function bindEvents(): void {
-  document.querySelector<HTMLSelectElement>("#sample")?.addEventListener("change", (event) => {
-    const id = (event.target as HTMLSelectElement).value;
-    selectedSample = samples.find((sample) => sample.id === id) as SampleScenario;
-    topology = cloneTopology(selectedSample.topology);
-    selectedDeviceId = topology.devices[0]?.id ?? "";
-    ping = { ...selectedSample.ping };
-    result = resetNetwork(topology);
-    linkStart = undefined;
-    render();
-  });
-
   document.querySelectorAll<SVGGElement>("[data-device]").forEach((node) => {
     node.addEventListener("pointerdown", (event) => {
       const svgPoint = eventToSvgPoint(event);
@@ -431,6 +422,14 @@ function bindEvents(): void {
   document.querySelector<HTMLButtonElement>("#reset-network")?.addEventListener("click", () => {
     result = resetNetwork(topology);
     render();
+  });
+
+  document.querySelector<HTMLButtonElement>("#export-network")?.addEventListener("click", () => {
+    exportNetworkConfig();
+  });
+
+  document.querySelector<HTMLInputElement>("#import-network")?.addEventListener("change", (event) => {
+    importNetworkConfig(event.target as HTMLInputElement);
   });
 
   document.querySelector<HTMLButtonElement>("#clear-link")?.addEventListener("click", () => {
@@ -509,6 +508,50 @@ function addDevice(kind: DeviceKind): void {
     });
   }
   selectedDeviceId = id;
+}
+
+function exportNetworkConfig(): void {
+  const config = {
+    version: 1,
+    description: topologyDescription,
+    topology,
+    ping,
+  };
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "routelab-network.json";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function importNetworkConfig(input: HTMLInputElement): void {
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const parsed = JSON.parse(String(reader.result)) as Partial<{ description: string; topology: Topology; ping: PingOptions }>;
+      if (!parsed.topology || !Array.isArray(parsed.topology.devices) || !Array.isArray(parsed.topology.links)) {
+        throw new Error("Missing topology.devices or topology.links");
+      }
+      topology = cloneTopology(parsed.topology);
+      selectedDeviceId = topology.devices[0]?.id ?? "";
+      const firstHost = topology.devices.find((device): device is Extract<Device, { kind: "host" }> => device.kind === "host");
+      ping = parsed.ping && topology.devices.some((device) => device.id === parsed.ping?.fromHostId)
+        ? { ...parsed.ping }
+        : { fromHostId: firstHost?.id ?? "", toIp: firstHost?.ports[0].config.ip ?? "0.0.0.0", ttl: 8 };
+      topologyDescription = parsed.description || "Imported network configuration.";
+      linkStart = undefined;
+      result = resetNetwork(topology);
+      render();
+    } catch (error) {
+      window.alert(`Could not import network JSON: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+  reader.readAsText(file);
 }
 
 function deleteSelectedDevice(): void {
