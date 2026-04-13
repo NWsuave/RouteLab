@@ -37,9 +37,14 @@ interface RuntimeState {
   arpTables: Map<DeviceId, Map<string, string>>;
   pendingPackets: Map<DeviceId, PendingPacket[]>;
   events: Array<() => void>;
+  unlinkedDrops: Map<string, { port: PortRef; count: number }>;
   nextLogId: number;
   nextTraversalId: number;
   time: number;
+}
+
+export function resetNetwork(topology: Topology): SimulationResult {
+  return finish(createRuntime(topology));
 }
 
 export function simulatePing(topology: Topology, options: PingOptions): SimulationResult {
@@ -70,6 +75,7 @@ function createRuntime(topology: Topology): RuntimeState {
     arpTables: new Map(),
     pendingPackets: new Map(),
     events: [],
+    unlinkedDrops: new Map(),
     nextLogId: 1,
     nextTraversalId: 1,
     time: 0,
@@ -97,6 +103,7 @@ function enqueue(state: RuntimeState, event: () => void): void {
 }
 
 function finish(state: RuntimeState): SimulationResult {
+  summarizeUnlinkedDrops(state);
   return {
     log: state.log,
     traversals: state.traversals,
@@ -188,7 +195,7 @@ function sendIpFromDevice(
 function sendFrame(state: RuntimeState, from: PortRef, frame: EthernetFrame, reason: string): void {
   const link = findLink(state.links, from);
   if (!link) {
-    addLog(state, "drop", `${from.deviceId}.${from.portId} is not linked`, from.deviceId);
+    addUnlinkedDrop(state, from);
     return;
   }
   const to = samePort(link.a, from) ? link.b : link.a;
@@ -412,6 +419,22 @@ function mustArpTable(state: RuntimeState, deviceId: DeviceId): Map<string, stri
 
 function addLog(state: RuntimeState, level: SimulationLogEntry["level"], message: string, deviceId?: DeviceId): void {
   state.log.push({ id: state.nextLogId++, time: state.time, level, message, deviceId });
+}
+
+function addUnlinkedDrop(state: RuntimeState, port: PortRef): void {
+  const key = `${port.deviceId}.${port.portId}`;
+  const existing = state.unlinkedDrops.get(key);
+  state.unlinkedDrops.set(key, existing ? { port, count: existing.count + 1 } : { port, count: 1 });
+}
+
+function summarizeUnlinkedDrops(state: RuntimeState): void {
+  const drops = [...state.unlinkedDrops.values()];
+  if (drops.length === 0) return;
+  const total = drops.reduce((sum, item) => sum + item.count, 0);
+  const ports = drops
+    .map((item) => `${item.port.deviceId}.${item.port.portId}${item.count > 1 ? ` x${item.count}` : ""}`)
+    .join(", ");
+  addLog(state, "drop", `Dropped ${total} frame${total === 1 ? "" : "s"} on unlinked interface${drops.length === 1 ? "" : "s"}: ${ports}`);
 }
 
 function cloneFrame(frame: EthernetFrame): EthernetFrame {

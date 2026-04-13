@@ -1,5 +1,5 @@
 import { samples, SampleScenario } from "./data/samples";
-import { simulatePing } from "./sim/simulator";
+import { resetNetwork, simulatePing } from "./sim/simulator";
 import { Device, DeviceKind, EthernetFrame, Link, PingOptions, Topology } from "./sim/types";
 import "./styles.css";
 
@@ -12,7 +12,7 @@ let topology = cloneTopology(selectedSample.topology);
 let selectedDeviceId = topology.devices[0]?.id ?? "";
 let linkStart: { deviceId: string; portId: string } | undefined;
 let ping: PingOptions = { ...selectedSample.ping };
-let result = simulatePing(topology, ping);
+let result = resetNetwork(topology);
 let showInterfaceLabels = false;
 
 interface DragState {
@@ -49,6 +49,7 @@ function render(): void {
           <button data-add="switch">Add switch</button>
           <button data-add="router">Add router</button>
           <button id="clear-link">${linkStart ? "Cancel link" : "Link mode"}</button>
+          <button id="reset-network">Reset network</button>
           <label class="toggle"><input id="show-addresses" type="checkbox" ${showInterfaceLabels ? "checked" : ""} /> Show IP/MAC labels</label>
         </div>
         <svg id="topology-svg" class="topology" viewBox="0 0 900 360" role="img" aria-label="Network topology">
@@ -357,7 +358,7 @@ function bindEvents(): void {
     topology = cloneTopology(selectedSample.topology);
     selectedDeviceId = topology.devices[0]?.id ?? "";
     ping = { ...selectedSample.ping };
-    result = simulatePing(topology, ping);
+    result = resetNetwork(topology);
     linkStart = undefined;
     render();
   });
@@ -422,9 +423,14 @@ function bindEvents(): void {
   document.querySelectorAll<HTMLButtonElement>("[data-add]").forEach((button) => {
     button.addEventListener("click", () => {
       addDevice(button.dataset.add as DeviceKind);
-      result = simulatePing(topology, ping);
+      result = resetNetwork(topology);
       render();
     });
+  });
+
+  document.querySelector<HTMLButtonElement>("#reset-network")?.addEventListener("click", () => {
+    result = resetNetwork(topology);
+    render();
   });
 
   document.querySelector<HTMLButtonElement>("#clear-link")?.addEventListener("click", () => {
