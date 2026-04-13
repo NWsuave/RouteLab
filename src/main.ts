@@ -1,6 +1,6 @@
 import { samples, SampleScenario } from "./data/samples";
 import { simulatePing } from "./sim/simulator";
-import { Device, DeviceKind, Link, PingOptions, Topology } from "./sim/types";
+import { Device, DeviceKind, EthernetFrame, Link, PingOptions, Topology } from "./sim/types";
 import "./styles.css";
 
 const appRoot = document.querySelector<HTMLDivElement>("#app");
@@ -52,6 +52,7 @@ function render(): void {
           <label class="toggle"><input id="show-addresses" type="checkbox" ${showInterfaceLabels ? "checked" : ""} /> Show IP/MAC labels</label>
         </div>
         <svg id="topology-svg" class="topology" viewBox="0 0 900 360" role="img" aria-label="Network topology">
+          ${renderSubnetGroups()}
           ${renderLinks(topology.links)}
           ${topology.devices.map(renderDevice).join("")}
         </svg>
@@ -77,13 +78,31 @@ function render(): void {
         <div>
           <h2>Traversal</h2>
           <ol class="traversal-list">
-            ${result.traversals.map((item) => `<li><span>${item.reason}</span><small>${item.from.deviceId}.${item.from.portId} -> ${item.to.deviceId}.${item.to.portId}</small></li>`).join("")}
+            ${result.traversals.map((item) => `
+              <li>
+                <span class="step-index">${item.id}</span>
+                <div class="step-body">
+                  <div class="step-title">
+                    <span>${item.reason}</span>
+                    <span class="protocol-badge">${frameBadge(item.frame)}</span>
+                  </div>
+                  <div class="step-meta">${item.from.deviceId}.${item.from.portId} <span>to</span> ${item.to.deviceId}.${item.to.portId}</div>
+                  <div class="step-detail">${frameDetail(item.frame)}</div>
+                </div>
+              </li>
+            `).join("")}
           </ol>
         </div>
         <div>
           <h2>Ordered log</h2>
           <ol class="log-list">
-            ${result.log.map((entry) => `<li class="${entry.level}"><small>t=${entry.time}</small> ${entry.message}</li>`).join("")}
+            ${result.log.map((entry) => `
+              <li class="${entry.level}">
+                <span class="log-time">t=${entry.time}</span>
+                <span class="log-level">${entry.level}</span>
+                <span class="log-message">${entry.message}</span>
+              </li>
+            `).join("")}
           </ol>
         </div>
       </section>
@@ -96,6 +115,18 @@ function render(): void {
   `;
 
   bindEvents();
+}
+
+function renderSubnetGroups(): string {
+  return subnetGroups().map((group, index) => {
+    const palette = (index % 4) + 1;
+    return `
+      <g class="subnet-group palette-${palette}">
+        <rect x="${group.x}" y="${group.y}" width="${group.width}" height="${group.height}" rx="8"></rect>
+        <text x="${group.x + 12}" y="${group.y + 20}">${group.label}</text>
+      </g>
+    `;
+  }).join("");
 }
 
 function renderLinks(links: Link[]): string {
@@ -192,6 +223,21 @@ function tableBlock(title: string, headers: string[], rows: string[][]): string 
       </table>
     </div>
   `;
+}
+
+function frameBadge(frame: EthernetFrame): string {
+  return frame.etherType;
+}
+
+function frameDetail(frame: EthernetFrame): string {
+  if (frame.etherType === "ARP") {
+    const arp = frame.payload as { kind: string; senderIp: string; targetIp: string };
+    return arp.kind === "request"
+      ? `Request from ${arp.senderIp} for ${arp.targetIp}`
+      : `Reply from ${arp.senderIp} to ${arp.targetIp}`;
+  }
+  const ip = frame.payload as { srcIp: string; dstIp: string; ttl: number; payload: { kind: string } };
+  return `${ip.payload.kind} ${ip.srcIp} -> ${ip.dstIp}, TTL ${ip.ttl}, ${frame.srcMac} -> ${frame.dstMac}`;
 }
 
 function bindEvents(): void {
@@ -377,6 +423,75 @@ function firstFreePort(deviceId: string): { deviceId: string; portId: string } |
   if (!device) return undefined;
   const port = device.ports.find((item) => !topology.links.some((link) => (link.a.deviceId === deviceId && link.a.portId === item.id) || (link.b.deviceId === deviceId && link.b.portId === item.id)));
   return port ? { deviceId, portId: port.id } : undefined;
+}
+
+function subnetGroups(): Array<{ label: string; x: number; y: number; width: number; height: number }> {
+  const memberships = new Map<string, Set<string>>();
+  for (const device of topology.devices) {
+    for (const subnet of deviceSubnets(device)) {
+      const members = memberships.get(subnet) ?? new Set<string>();
+      members.add(device.id);
+      for (const neighborId of linkedSwitches(device.id)) {
+        members.add(neighborId);
+      }
+      memberships.set(subnet, members);
+    }
+  }
+
+  return [...memberships.entries()].map(([label, deviceIds]) => {
+    const boxes = [...deviceIds].map((deviceId) => {
+      const device = topology.devices.find((item) => item.id === deviceId);
+      if (!device) return undefined;
+      const box = deviceBox(device);
+      return {
+        left: device.position.x - box.width / 2,
+        right: device.position.x + box.width / 2,
+        top: device.position.y - box.height / 2,
+        bottom: device.position.y + box.height / 2,
+      };
+    }).filter((box): box is { left: number; right: number; top: number; bottom: number } => Boolean(box));
+    const padding = 22;
+    const left = Math.max(8, Math.min(...boxes.map((box) => box.left)) - padding);
+    const top = Math.max(8, Math.min(...boxes.map((box) => box.top)) - padding);
+    const right = Math.min(892, Math.max(...boxes.map((box) => box.right)) + padding);
+    const bottom = Math.min(352, Math.max(...boxes.map((box) => box.bottom)) + padding);
+    return { label, x: left, y: top, width: right - left, height: bottom - top };
+  });
+}
+
+function deviceSubnets(device: Device): string[] {
+  if (device.kind === "host") {
+    const config = device.ports[0].config;
+    return [subnetLabel(config.ip, config.mask)];
+  }
+  if (device.kind === "router") {
+    return device.ports.map((port) => subnetLabel(port.config.ip, port.config.mask));
+  }
+  return [];
+}
+
+function linkedSwitches(deviceId: string): string[] {
+  return topology.links.flatMap((link) => {
+    const peer = link.a.deviceId === deviceId ? link.b.deviceId : link.b.deviceId === deviceId ? link.a.deviceId : undefined;
+    const peerDevice = peer ? topology.devices.find((device) => device.id === peer) : undefined;
+    return peerDevice?.kind === "switch" ? [peerDevice.id] : [];
+  });
+}
+
+function subnetLabel(ip: string, mask: number): string {
+  return `${intToIp(ipToIntLocal(ip) & maskToIntLocal(mask))}/${mask}`;
+}
+
+function ipToIntLocal(ip: string): number {
+  return ip.split(".").map(Number).reduce((value, part) => ((value << 8) | part) >>> 0, 0);
+}
+
+function maskToIntLocal(mask: number): number {
+  return mask === 0 ? 0 : (0xffffffff << (32 - mask)) >>> 0;
+}
+
+function intToIp(value: number): string {
+  return [24, 16, 8, 0].map((shift) => (value >>> shift) & 255).join(".");
 }
 
 function deviceBox(device: Device): { width: number; height: number } {

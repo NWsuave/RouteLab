@@ -161,6 +161,53 @@ h3 {
   stroke-width: 4;
 }
 
+.subnet-group rect {
+  fill-opacity: 0.32;
+  stroke-dasharray: 6 5;
+  stroke-width: 2;
+}
+
+.subnet-group text {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.subnet-group.palette-1 rect {
+  fill: #8ecae6;
+  stroke: #1b6f93;
+}
+
+.subnet-group.palette-1 text {
+  fill: #16465c;
+}
+
+.subnet-group.palette-2 rect {
+  fill: #b7e4c7;
+  stroke: #2d6a4f;
+}
+
+.subnet-group.palette-2 text {
+  fill: #24563f;
+}
+
+.subnet-group.palette-3 rect {
+  fill: #ffd166;
+  stroke: #a66f00;
+}
+
+.subnet-group.palette-3 text {
+  fill: #705000;
+}
+
+.subnet-group.palette-4 rect {
+  fill: #f4a261;
+  stroke: #9c4f16;
+}
+
+.subnet-group.palette-4 text {
+  fill: #70380f;
+}
+
 .device {
   cursor: grab;
   touch-action: none;
@@ -243,15 +290,86 @@ fieldset {
 
 .traversal-list,
 .log-list {
+  display: grid;
+  gap: 0.6rem;
+  list-style: none;
   margin: 0;
   max-height: 18rem;
   overflow: auto;
-  padding-left: 1.35rem;
+  padding: 0;
 }
 
 .traversal-list li,
 .log-list li {
-  margin-bottom: 0.45rem;
+  background: #f8faf9;
+  border: 1px solid #d9dfdc;
+  border-radius: 8px;
+  margin: 0;
+}
+
+.traversal-list li {
+  align-items: flex-start;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 2rem 1fr;
+  padding: 0.65rem;
+}
+
+.step-index {
+  align-items: center;
+  background: #233d4d;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 800;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
+}
+
+.step-title {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.step-title span:first-child {
+  font-weight: 800;
+}
+
+.protocol-badge,
+.log-level {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 0.16rem 0.45rem;
+  text-transform: uppercase;
+}
+
+.protocol-badge {
+  background: #e5f0f7;
+  color: #1b5674;
+}
+
+.step-meta,
+.step-detail {
+  color: #53615d;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.step-meta {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  margin-top: 0.16rem;
+}
+
+.step-meta span {
+  color: #7a8582;
+  font-family: inherit;
+  margin: 0 0.25rem;
 }
 
 .traversal-list small,
@@ -260,13 +378,51 @@ fieldset {
   display: block;
 }
 
+.log-list li {
+  align-items: start;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: 3rem 4.6rem 1fr;
+  padding: 0.6rem;
+}
+
+.log-time {
+  color: #66736f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+}
+
+.log-message {
+  line-height: 1.35;
+}
+
+.log-level {
+  background: #edf2f4;
+  color: #344347;
+  text-align: center;
+}
+
 .log-list .drop {
-  color: #a4161a;
+  background: #fff5f5;
+  border-color: #f1b7b9;
+  color: #7f1115;
+}
+
+.log-list .drop .log-level {
+  background: #a4161a;
+  color: #ffffff;
 }
 
 .log-list .success {
+  background: #f0fbf6;
+  border-color: #a7dcc6;
   color: #0b6e4f;
   font-weight: 700;
+}
+
+.log-list .success .log-level {
+  background: #0b6e4f;
+  color: #ffffff;
 }
 
 .table-grid {
