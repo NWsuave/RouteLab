@@ -202,8 +202,7 @@ h3 {
   border: 1px solid #b9c9c4;
   border-radius: 8px;
   display: block;
-  height: auto;
-  height: clamp(var(--canvas-min-height), calc(100vh - 9.5rem), 52rem);
+  height: clamp(var(--canvas-min-height), calc(100vh - 9.5rem), 52rem); /* calc(100vh -9.5rem); */
   min-height: var(--canvas-min-height);
   width: 100%;
 }

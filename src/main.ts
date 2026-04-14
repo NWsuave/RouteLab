@@ -181,10 +181,10 @@ function renderDeviceSymbol(device: Device): string {
 }
 
 function renderRouterSymbol(): string {
-  const radius = 45 * diagramScale;
-  const arrowOffset = 23 * diagramScale;
+  const radius = 25 * diagramScale;
+  const arrowOffset = 12 * diagramScale;
   return `
-    <g class="router-symbol">
+    <g class="router-symbol" opacity="0.7">
       <circle class="router-disc" cx="0" cy="0" r="${radius}"></circle>
       ${routerArrow(0, -arrowOffset, "up")}
       ${routerArrow(0, arrowOffset, "down")}
@@ -195,16 +195,16 @@ function renderRouterSymbol(): string {
 }
 
 function renderSwitchSymbol(): string {
-  const width = 100 * diagramScale;
-  const height = 84 * diagramScale;
-  const arrowX = 20 * diagramScale;
-  const arrowY = 18 * diagramScale;
+  const width = 60 * diagramScale;
+  const height = 44 * diagramScale;
+  const arrowX = 14 * diagramScale;
+  const arrowY = 11 * diagramScale;
   return `
-    <g class="switch-symbol">
+    <g class="switch-symbol" opacity="0.7">
       <rect class="switch-body" x="${-width / 2}" y="${-height / 2}" width="${width}" height="${height}" rx="${10 * diagramScale}"></rect>
       ${switchArrow(-arrowX, -arrowY, "left")}
-      ${switchArrow(arrowX, -arrowY, "right")}
-      ${switchArrow(-arrowX, arrowY, "left")}
+      ${switchArrow(arrowX, -arrowY + 7, "right")}
+      ${switchArrow(-arrowX, arrowY - 7, "left")}
       ${switchArrow(arrowX, arrowY, "right")}
     </g>
   `;
@@ -224,11 +224,11 @@ function renderHostSymbol(): string {
 }
 
 function routerArrow(x: number, y: number, direction: "up" | "down" | "left" | "right"): string {
-  const rotation = { right: 0, down: 90, left: 180, up: 270 }[direction];
+  const rotation = { right: 180, down: 90, left: 0, up: 270 }[direction];
   const s = diagramScale;
   return `
     <g class="symbol-arrow" transform="translate(${x} ${y}) rotate(${rotation})">
-      <line x1="${-10 * s}" y1="0" x2="${7 * s}" y2="0" style="stroke-width: ${8 * s}px"></line>
+      <line x1="${-10 * s}" y1="0" x2="${7 * s}" y2="0" style="stroke-width: ${3 * s}px"></line>
       <path d="M ${3 * s} ${-5 * s} L ${10 * s} 0 L ${3 * s} ${5 * s} Z"></path>
     </g>
   `;
@@ -239,7 +239,7 @@ function switchArrow(x: number, y: number, direction: "up" | "down" | "left" | "
   const s = diagramScale;
   return `
     <g class="symbol-arrow switch-arrow" transform="translate(${x} ${y}) rotate(${rotation})">
-      <line x1="${-9 * s}" y1="0" x2="${6 * s}" y2="0" style="stroke-width: ${9 * s}px"></line>
+      <line x1="${-9 * s}" y1="0" x2="${6 * s}" y2="0" style="stroke-width: ${3 * s}px"></line>
       <path d="M ${2 * s} ${-4 * s} L ${9 * s} 0 L ${2 * s} ${4 * s} Z"></path>
     </g>
   `;
