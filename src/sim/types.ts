@@ -4,6 +4,26 @@ export type DeviceId = string;
 export type PortId = string;
 export type LinkId = string;
 
+export interface ScenarioFile {
+  id: string;
+  name: string;
+  description: string;
+  topology: Topology;
+  ping: PingOptions;
+}
+
+export function isScenarioFile(obj: any): obj is ScenarioFile {
+  return (
+    obj &&
+    typeof obj.id === "string" &&
+    typeof obj.name === "string" &&
+    typeof obj.description === "string" &&
+    obj.topology &&
+    Array.isArray(obj.topology.devices) &&
+    Array.isArray(obj.topology.links)
+  );
+}
+
 export interface Position {
   x: number;
   y: number;

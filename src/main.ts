@@ -1,19 +1,23 @@
-import { samples } from "./data/samples";
 import { resetNetwork, simulatePing } from "./sim/simulator";
-import { Device, DeviceKind, EthernetFrame, Link, PingOptions, Topology } from "./sim/types";
+import { Device, DeviceKind, EthernetFrame, Link, PingOptions, Topology, ScenarioFile, isScenarioFile } from "./sim/types";
 import "./styles.css";
+import scenarioData from "./data/default-topology.json";
 
 const appRoot = document.querySelector<HTMLDivElement>("#app");
 if (!appRoot) throw new Error("Missing #app");
 const root = appRoot;
 
-let topology = cloneTopology(samples[0].topology);
+const topologyData = scenarioData as Topology;
+console.log(scenarioData);
+console.log(scenarioData.topology);
+
+let topology = cloneTopology(topologyData);
 let selectedDeviceId = topology.devices[0]?.id ?? "";
 let linkStart: { deviceId: string; portId: string } | undefined;
-let ping: PingOptions = { ...samples[0].ping };
+let ping: PingOptions = { ...topologyData.ping };
 let result = resetNetwork(topology);
 let showInterfaceLabels = false;
-let topologyDescription = samples[0].description;
+let topologyDescription = topologyData.description;
 let diagramScale = 1;
 
 interface DragState {

@@ -1,0 +1,109 @@
+{
+  "devices": [
+    {
+      "id": "h1",
+      "name": "Host A",
+      "kind": "host",
+      "position": { "x": 120, "y": 200 },
+      "ports": [
+        {
+          "id": "eth0",
+          "config": {
+            "ip": "192.168.1.10",
+            "mask": 24,
+            "mac": "02:00:00:00:00:0a",
+            "gateway": "192.168.1.1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "s1",
+      "name": "Switch 1",
+      "kind": "switch",
+      "position": { "x": 300, "y": 200 },
+      "ports": [
+        { "id": "p1" },
+        { "id": "p2" },
+        { "id": "p3" },
+        { "id": "p4" }
+      ]
+    },
+    {
+      "id": "r1",
+      "name": "Router 1",
+      "kind": "router",
+      "position": { "x": 480, "y": 200 },
+      "ports": [
+        {
+          "id": "e0",
+          "config": {
+            "ip": "192.168.1.1",
+            "mask": 24,
+            "mac": "02:00:00:00:01:01"
+          }
+        },
+        {
+          "id": "e1",
+          "config": {
+            "ip": "192.168.2.1",
+            "mask": 24,
+            "mac": "02:00:00:00:02:01"
+          }
+        }
+      ],
+      "routes": []
+    },
+    {
+      "id": "s2",
+      "name": "Switch 2",
+      "kind": "switch",
+      "position": { "x": 660, "y": 200 },
+      "ports": [
+        { "id": "p1" },
+        { "id": "p2" },
+        { "id": "p3" },
+        { "id": "p4" }
+      ]
+    },
+    {
+      "id": "h2",
+      "name": "Host B",
+      "kind": "host",
+      "position": { "x": 840, "y": 200 },
+      "ports": [
+        {
+          "id": "eth0",
+          "config": {
+            "ip": "192.168.2.20",
+            "mask": 24,
+            "mac": "02:00:00:00:00:14",
+            "gateway": "192.168.2.1"
+          }
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "id": "l1",
+      "a": { "deviceId": "h1", "portId": "eth0" },
+      "b": { "deviceId": "s1", "portId": "p1" }
+    },
+    {
+      "id": "l2",
+      "a": { "deviceId": "s1", "portId": "p2" },
+      "b": { "deviceId": "r1", "portId": "e0" }
+    },
+    {
+      "id": "l3",
+      "a": { "deviceId": "r1", "portId": "e1" },
+      "b": { "deviceId": "s2", "portId": "p1" }
+    },
+    {
+      "id": "l4",
+      "a": { "deviceId": "s2", "portId": "p2" },
+      "b": { "deviceId": "h2", "portId": "eth0" }
+    }
+  ]
+}
